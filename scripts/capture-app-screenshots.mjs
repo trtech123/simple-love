@@ -43,7 +43,7 @@ const screens = [
         });
       });
     },
-    waitForText: "1 / 5",
+    waitForText: "Question 1",
   },
   { slug: "payment-mock", path: "/payment/mock?session=screenshot-paid-session" },
   { slug: "payment-return-pending", path: "/payment/return?payment=e2e-pending-payment" },
@@ -96,7 +96,7 @@ const screens = [
         });
       });
     },
-    waitForText: "1 / 3",
+    waitForText: "Question 1",
   },
   { slug: "chat-signed-out", path: "/chat/conversation-1" },
   {

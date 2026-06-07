@@ -55,13 +55,28 @@ textarea {
   font: inherit;
 }
 
+button,
+a,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
 table {
   width: 100%;
 }
 
 .page-shell {
   min-height: 100dvh;
-  padding: 48px 24px;
+  width: 100%;
+  padding: clamp(28px, 5vw, 56px) clamp(16px, 3vw, 32px);
+  overflow-x: clip;
 }
 
 .brand-mascot-row {
@@ -844,18 +859,20 @@ p {
   min-height: 100dvh;
   background: var(--color-bg);
   color: var(--color-text);
-  padding: max(16px, env(safe-area-inset-top)) 14px max(24px, env(safe-area-inset-bottom));
+  padding: max(clamp(18px, 3vw, 36px), env(safe-area-inset-top)) clamp(14px, 3vw, 32px)
+    max(clamp(24px, 4vw, 44px), env(safe-area-inset-bottom));
+  overflow-x: clip;
 }
 
 .funnel-shell__inner {
   display: grid;
-  gap: 14px;
-  width: min(100%, 430px);
+  gap: clamp(14px, 2vw, 20px);
+  width: min(100%, 680px);
   margin: 0 auto;
 }
 
 .funnel-shell--wide .funnel-shell__inner {
-  width: min(100%, 760px);
+  width: min(100%, 980px);
 }
 
 .funnel-brand-link {
@@ -870,11 +887,12 @@ p {
 
 .funnel-card {
   display: grid;
-  gap: 16px;
+  gap: clamp(14px, 2vw, 20px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
-  padding: 20px;
+  min-width: 0;
+  padding: clamp(18px, 3vw, 28px);
   box-shadow: 0 8px 22px rgb(36 23 29 / 7%);
 }
 
@@ -909,7 +927,7 @@ p {
 
 .funnel-card h1,
 .funnel-copy-stack h1 {
-  font-size: clamp(28px, 8vw, 38px);
+  font-size: clamp(28px, 5vw, 42px);
 }
 
 .funnel-card h2,
@@ -1435,6 +1453,7 @@ p {
 .matches-page {
   display: grid;
   align-items: center;
+  width: 100%;
 }
 
 .quiz-panel,
@@ -1447,6 +1466,7 @@ p {
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   padding: 20px;
+  min-width: 0;
   box-shadow: 0 8px 22px rgb(36 23 29 / 7%);
 }
 
@@ -1769,6 +1789,7 @@ p {
 .chat-page {
   display: grid;
   align-items: center;
+  width: 100%;
 }
 
 .chat-shell,
@@ -1930,7 +1951,7 @@ p {
 .register-panel--claim {
   display: grid;
   width: min(100%, 980px);
-  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 0.95fr) minmax(min(320px, 100%), 1fr);
   gap: clamp(24px, 5vw, 56px);
   align-items: center;
   padding: clamp(24px, 5vw, 48px);
@@ -2137,6 +2158,7 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
 }
 
 .quiz-count,
@@ -2170,9 +2192,10 @@ p {
 
 .quiz-question {
   margin: 0 0 24px;
-  font-size: 22px;
+  font-size: clamp(20px, 2.4vw, 26px);
   line-height: 1.55;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .answer-grid {
@@ -2223,6 +2246,9 @@ p {
   color: var(--color-text);
   font: inherit;
   text-align: right;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
   cursor: pointer;
 }
 
@@ -2248,6 +2274,8 @@ p {
   display: block;
   padding: 12px 14px 14px;
   font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .visual-answer-option--skip {
@@ -2263,6 +2291,10 @@ p {
 }
 
 @media (min-width: 640px) {
+  .answer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .visual-answer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2332,6 +2364,8 @@ p {
 .admin-table-wrapper {
   max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-table-wrapper .admin-table {
@@ -2356,6 +2390,7 @@ p {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  min-width: 0;
 }
 
 .admin-actions form {
@@ -2378,6 +2413,7 @@ p {
   display: grid;
   grid-template-columns: minmax(120px, 1fr) auto;
   gap: 8px;
+  min-width: 0;
 }
 
 .payment-reason {
@@ -2398,6 +2434,7 @@ p {
 
 .payment-link {
   width: fit-content;
+  max-width: 100%;
   margin-top: 0;
 }
 
@@ -2405,6 +2442,7 @@ p {
   display: grid;
   gap: 18px;
   max-width: 980px;
+  min-width: 0;
 }
 
 .admin-editor-header {
@@ -2413,6 +2451,7 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
 }
 
 .admin-editor-form,
@@ -2425,6 +2464,7 @@ p {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: #ffffff;
+  min-width: 0;
   padding: 16px;
 }
 
@@ -2467,6 +2507,7 @@ p {
   grid-template-columns: minmax(0, 1fr) 140px auto;
   gap: 10px;
   align-items: end;
+  min-width: 0;
 }
 
 .admin-editor-actions {
@@ -2474,6 +2515,7 @@ p {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  min-width: 0;
 }
 
 .admin-editor-meta {
@@ -2487,12 +2529,14 @@ p {
   grid-template-columns: 220px 1fr;
   min-width: 0;
   min-height: 100dvh;
+  overflow-x: clip;
 }
 
 .admin-sidebar {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
   padding: 24px;
   border-left: 1px solid var(--color-border);
   background: #ffffff;
@@ -2503,6 +2547,7 @@ p {
   text-decoration: none;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
+  overflow-wrap: anywhere;
 }
 
 .admin-sidebar a:hover {
@@ -2519,6 +2564,64 @@ p {
   min-width: 0;
 }
 
+@media (min-width: 861px) {
+  .quiz-panel {
+    width: min(100%, 680px);
+  }
+
+  .quiz-panel .answer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quiz-panel .visual-answer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quiz-panel .visual-answer-option {
+    min-height: 236px;
+  }
+}
+
+@media (max-width: 860px) {
+  .funnel-shell__inner,
+  .funnel-shell--wide .funnel-shell__inner {
+    width: min(100%, 620px);
+  }
+
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    position: sticky;
+    z-index: 10;
+    top: 0;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    border-left: 0;
+    border-bottom: 1px solid var(--color-border);
+    padding: max(12px, env(safe-area-inset-top)) 14px 12px;
+  }
+
+  .admin-sidebar a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .admin-content {
+    padding: 24px 18px 36px;
+  }
+
+  .admin-editor-row {
+    grid-template-columns: minmax(0, 1fr) minmax(112px, 0.35fr);
+  }
+
+  .admin-editor-row .admin-editor-actions {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 640px) {
   .page-shell {
     padding: 24px 16px;
@@ -2532,7 +2635,8 @@ p {
   .payment-panel,
   .register-panel,
   .matches-panel {
-    padding: 20px;
+    width: 100%;
+    padding: 18px;
   }
 
   .report-page {
@@ -2589,8 +2693,19 @@ p {
     flex-direction: column;
   }
 
+  .match-actions .primary-link,
+  .match-actions .secondary-link,
+  .chat-header .primary-link,
+  .chat-header .secondary-link {
+    width: 100%;
+  }
+
   .chat-message {
     width: 100%;
+  }
+
+  .chat-panel {
+    padding: 16px;
   }
 
   .register-grid {
@@ -2623,12 +2738,36 @@ p {
   }
 
   .admin-content {
-    padding: 24px 16px;
+    padding: 22px 14px 34px;
   }
 
   .admin-sidebar {
     border-left: 0;
     border-bottom: 1px solid var(--color-border);
+  }
+
+  .admin-table-wrapper {
+    margin-inline: -6px;
+    padding-inline: 6px;
+  }
+
+  .admin-table-wrapper .admin-table {
+    min-width: 680px;
+  }
+
+  .admin-actions,
+  .admin-editor-actions,
+  .payment-recovery-controls {
+    align-items: stretch;
+  }
+
+  .admin-actions .primary-button,
+  .admin-actions .secondary-button,
+  .admin-editor-actions .primary-button,
+  .admin-editor-actions .secondary-button,
+  .payment-recovery-controls .secondary-button,
+  .payment-link {
+    width: 100%;
   }
 
   .admin-editor-row {
@@ -2637,6 +2776,16 @@ p {
 
   .payment-action-form {
     grid-template-columns: 1fr;
+  }
+
+  .quiz-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .quiz-actions .primary-button,
+  .quiz-actions .secondary-button {
+    width: 100%;
   }
 
   .quiz-question {

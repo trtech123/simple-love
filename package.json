@@ -1,0 +1,42 @@
+{
+  "name": "simple-love",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3100",
+    "build": "next build",
+    "db:seed": "tsx scripts/db-seed.ts",
+    "verify:rls": "tsx scripts/verify-rls.ts",
+    "verify:realtime-chat": "tsx scripts/verify-realtime-chat.ts",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.45.0",
+    "lucide-react": "^1.17.0",
+    "next": "15.5.18",
+    "openai": "^4.70.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.48.0",
+    "@testing-library/react": "^16.0.1",
+    "@types/node": "^22.7.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "15.5.18",
+    "jsdom": "^25.0.1",
+    "tsx": "^4.22.4",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.2"
+  }
+}

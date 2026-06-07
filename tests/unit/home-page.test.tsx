@@ -9,10 +9,14 @@ describe("/ home page", () => {
     const Page = (await import("../../src/app/page")).default;
     const html = renderToString(<Page />);
 
-    expect(html).toContain("מהי הסיבה האמיתית שלא מצאת זוגיות עד היום?");
+    expect(html).toContain("מהי הסיבה");
+    expect(html).toContain("האמיתית");
+    expect(html).toContain("שלא מצאת זוגיות עד היום?");
     expect(html).toContain('href="/quiz"');
-    expect(html).toContain("מה תקבלי?");
-    expect(html).toContain("תשלום מאובטח");
-    expect(html).toContain("99 ש״ח");
+    expect(html).toContain("איך זה עובד?");
+    expect(html).toContain("landing-couple.png");
+    expect(html).toContain("דוח אישי ודיסקרטי");
+    expect(html).toContain("99");
+    expect(html).toContain("ש״ח בלבד");
   });
 });

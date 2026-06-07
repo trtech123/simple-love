@@ -11,6 +11,7 @@ describe("visible copy scan", () => {
         "LovLov",
         "LOVLOV",
         "ME",
+        "Simple",
       ],
     });
 

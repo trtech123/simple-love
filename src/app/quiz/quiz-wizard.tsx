@@ -191,7 +191,7 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
 
   if (showMilestone) {
     return (
-      <FunnelShell>
+      <FunnelShell showBrand={false}>
         <ProgressHeader current={Math.min(currentIndex + 1, questions.length)} total={questions.length} label={config.progressLabel} />
         <FunnelCard className="quiz-milestone" aria-labelledby="quiz-milestone-title">
           <FunnelStateIcon icon={CheckCircle2} />
@@ -214,7 +214,7 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
   }
 
   return (
-    <FunnelShell>
+    <FunnelShell showBrand={false}>
       <ProgressHeader current={currentIndex + 1} total={questions.length} label={config.progressLabel} />
       <FunnelCard className="quiz-panel" aria-labelledby="quiz-title">
         <p className="funnel-eyebrow">{config.title}</p>

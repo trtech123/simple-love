@@ -5,18 +5,19 @@ import { Wordmark } from "@/components/brand/wordmark";
 type FunnelShellProps = {
   children: ReactNode;
   className?: string;
+  showBrand?: boolean;
   topSlot?: ReactNode;
 };
 
-export function FunnelShell({ children, className, topSlot }: FunnelShellProps) {
+export function FunnelShell({ children, className, showBrand = true, topSlot }: FunnelShellProps) {
   return (
     <main className={["funnel-shell", className].filter(Boolean).join(" ")} dir="rtl">
       <div className="funnel-shell__inner">
-        {topSlot ?? (
+        {topSlot ?? (showBrand ? (
           <Link className="funnel-brand-link" href="/" aria-label="LOVLOV.ME">
             <Wordmark size={24} />
           </Link>
-        )}
+        ) : null)}
         {children}
       </div>
     </main>

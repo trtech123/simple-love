@@ -60,9 +60,12 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
 
   const questions = payload?.questionnaire.questions ?? [];
   const currentQuestion = questions[currentIndex];
-  const answeredCount = payload ? Object.keys(payload.answers).length : 0;
-  const allAnswered = payload ? answeredCount === questions.length : false;
+  const answeredCount = payload ? countAnsweredQuestions(questions, payload.answers) : 0;
+  const missingCount = Math.max(0, questions.length - answeredCount);
+  const allAnswered = payload ? missingCount === 0 : false;
   const selectedOptionId = currentQuestion ? payload?.answers[currentQuestion.id] : undefined;
+  const currentQuestionAnswered = Boolean(selectedOptionId);
+  const firstUnansweredIndex = payload ? findFirstUnansweredQuestionIndex(questions, payload.answers) : -1;
   const progressPercent = useMemo(() => {
     if (!questions.length) {
       return 0;
@@ -88,6 +91,9 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
       const data = await readJsonResponse<QuizPayload>(response);
 
       setPayload(data);
+      if (mode === "matching") {
+        setCurrentIndex(getMatchingInitialQuestionIndex(data));
+      }
 
       if (!token) {
         window.history.replaceState(null, "", `${config.pagePath}?session=${encodeURIComponent(data.publicToken)}`);
@@ -160,6 +166,18 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
       setError(caught instanceof Error ? caught.message : "לא הצלחנו לסיים את השאלון");
       setSubmitting(false);
     }
+  }
+
+  function moveToNextQuestion() {
+    setCurrentIndex((index) => Math.min(questions.length - 1, index + 1));
+  }
+
+  function moveToFirstUnansweredQuestion() {
+    if (firstUnansweredIndex === -1) {
+      return;
+    }
+
+    setCurrentIndex(firstUnansweredIndex);
   }
 
   if (loading) {
@@ -275,19 +293,41 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
           </button>
 
           {currentIndex === questions.length - 1 ? (
+            mode === "matching" && !allAnswered ? (
+              <button
+                className="primary-button"
+                type="button"
+                disabled={savingQuestionId !== null || firstUnansweredIndex === -1}
+                onClick={moveToFirstUnansweredQuestion}
+              >
+                לשאלה החסרה הראשונה
+              </button>
+            ) : (
+              <button
+                className="primary-button"
+                type="button"
+                disabled={!allAnswered || submitting || savingQuestionId !== null}
+                onClick={() => void submitQuiz()}
+              >
+                {submitting ? config.submittingLabel : config.finalButton}
+              </button>
+            )
+          ) : mode === "matching" ? (
             <button
-              className="primary-button"
+              className="secondary-button"
               type="button"
-              disabled={!allAnswered || submitting || savingQuestionId !== null}
-              onClick={() => void submitQuiz()}
+              disabled={savingQuestionId !== null}
+              onClick={moveToNextQuestion}
             >
-              {submitting ? config.submittingLabel : config.finalButton}
+              {currentQuestionAnswered ? "המשך" : "דלג/י בינתיים"}
             </button>
           ) : null}
         </div>
 
         <p className="quiz-footnote" data-progress-percent={progressPercent}>
-          {answeredCount} תשובות נשמרו
+          {mode === "matching"
+            ? `${answeredCount} תשובות נשמרו, ${missingCount} שאלות נשארו`
+            : `${answeredCount} תשובות נשמרו`}
         </p>
       </FunnelCard>
     </FunnelShell>
@@ -349,6 +389,24 @@ class HttpResponseError extends Error {
 
 function isVisualTasteQuestion(question: QuizPayload["questionnaire"]["questions"][number]) {
   return Boolean(question.usageFlags?.visualTaste || question.stableKey?.startsWith("visual_taste_"));
+}
+
+function getMatchingInitialQuestionIndex(payload: QuizPayload) {
+  const questions = payload.questionnaire.questions;
+  const firstUnansweredIndex = findFirstUnansweredQuestionIndex(questions, payload.answers);
+
+  return firstUnansweredIndex === -1 ? Math.max(0, questions.length - 1) : firstUnansweredIndex;
+}
+
+function findFirstUnansweredQuestionIndex(
+  questions: QuizPayload["questionnaire"]["questions"],
+  answers: QuizPayload["answers"],
+) {
+  return questions.findIndex((question) => !answers[question.id]);
+}
+
+function countAnsweredQuestions(questions: QuizPayload["questionnaire"]["questions"], answers: QuizPayload["answers"]) {
+  return questions.reduce((count, question) => (answers[question.id] ? count + 1 : count), 0);
 }
 
 function isSkipOption(option: QuizPayload["questionnaire"]["questions"][number]["options"][number]) {

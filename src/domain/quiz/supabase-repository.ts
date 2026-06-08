@@ -283,6 +283,19 @@ export function createSupabaseMatchingSessionRepository(supabase: SupabaseClient
 
       return generateAndPersistMatches(supabase, userId);
     },
+    async skipQuestionnaireAndGenerateMatches(userId) {
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from("profiles")
+        .update({ completed_depth_questionnaire_at: now, updated_at: now })
+        .eq("user_id", userId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return generateAndPersistMatches(supabase, userId);
+    },
   };
 }
 

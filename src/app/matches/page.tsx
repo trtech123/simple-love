@@ -8,6 +8,12 @@ import { loadMatchesPageData } from "./matches-loader";
 
 export const dynamic = "force-dynamic";
 
+const lockedPreviewCards = [
+  { score: 92, meta: "כוונה זוגית דומה - אזור קרוב" },
+  { score: 88, meta: "קצב תקשורת מתאים - ערכים קרובים" },
+  { score: 84, meta: "פוטנציאל שיחה גבוה - התאמת אורח חיים" },
+];
+
 export default async function MatchesPage() {
   const userId = await requireAuthenticatedUserId();
 
@@ -60,15 +66,38 @@ export default async function MatchesPage() {
 
   if (!profile.hasMatchingEntitlement) {
     return (
-      <FunnelShell>
-        <FunnelCard>
-          <FunnelStateIcon icon={HeartHandshake} />
-          <p className="funnel-eyebrow">שלב בתשלום</p>
-          <h1>פתיחת ההתאמות שלך</h1>
-          <p>הדוח המלא כבר שולם. כדי לפתוח התאמות ושיחה, צריך לפתוח את שלב ההתאמות.</p>
-          <PriceSummary title="פתיחת התאמות ושיחות" price="99 ש״ח" caption="תשלום חד פעמי לשלב ההתאמות." />
-          <IconList items={[{ icon: MessagesSquare, title: "כולל פתיחת שיחה עם התאמות זמינות" }]} />
-          <MatchingUnlockButton />
+      <FunnelShell className="funnel-shell--wide">
+        <FunnelCard className="matches-panel matches-panel--locked">
+          <div className="locked-matches-header">
+            <div>
+              <p className="funnel-eyebrow">שלב בתשלום</p>
+              <h1>ההתאמות שלך מוכנות</h1>
+              <p>כדי לשמור על פרטיות, שמות, תמונות ופרטי התאמה נפתחים רק אחרי פתיחת שלב ההתאמות.</p>
+            </div>
+            <FunnelStateIcon icon={HeartHandshake} />
+          </div>
+
+          <div className="locked-matches-grid" aria-label="תצוגה מקדימה של התאמות נעולות">
+            {lockedPreviewCards.map((preview) => (
+              <article className="match-card match-card--locked" key={preview.score}>
+                <div>
+                  <h2>התאמה נעולה</h2>
+                  <p>{preview.meta}</p>
+                </div>
+                <strong>{preview.score}%</strong>
+                <div className="locked-preview-lines" aria-hidden="true">
+                  <span>שם ותמונה ייפתחו אחרי התשלום</span>
+                  <span>סיבת התאמה אישית תופיע כאן</span>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="locked-unlock-panel">
+            <PriceSummary title="פתיחת התאמות ושיחות" price="99 ש״ח" caption="תשלום חד פעמי לשלב ההתאמות." />
+            <IconList items={[{ icon: MessagesSquare, title: "כולל פתיחת שיחה עם התאמות זמינות" }]} />
+            <MatchingUnlockButton />
+          </div>
         </FunnelCard>
       </FunnelShell>
     );

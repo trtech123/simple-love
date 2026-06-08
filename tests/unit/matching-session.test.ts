@@ -3,6 +3,7 @@ import {
   completeMatchingSession,
   createOrGetMatchingSession,
   saveMatchingAnswer,
+  skipMatchingQuestionnaire,
   type MatchingSessionRepository,
 } from "../../src/domain/matching/session";
 import type { QuizQuestionnaire, QuizSessionRecord } from "../../src/domain/quiz/session";
@@ -34,6 +35,7 @@ const questionnaire: QuizQuestionnaire = {
 function createRepository(existingSession?: QuizSessionRecord) {
   const sessions = new Map<string, QuizSessionRecord>();
   const generatedMatches: string[] = [];
+  const skippedUsers: string[] = [];
 
   if (existingSession) {
     sessions.set(existingSession.publicToken, existingSession);
@@ -80,9 +82,13 @@ function createRepository(existingSession?: QuizSessionRecord) {
       generatedMatches.push(userId);
       return 3;
     },
+    async skipQuestionnaireAndGenerateMatches(userId) {
+      skippedUsers.push(userId);
+      return 2;
+    },
   };
 
-  return { repository, sessions, generatedMatches };
+  return { repository, sessions, generatedMatches, skippedUsers };
 }
 
 describe("matching session flow", () => {
@@ -158,5 +164,31 @@ describe("matching session flow", () => {
 
     expect(result).toEqual({ completed: true, matchCount: 3 });
     expect(generatedMatches).toEqual(["user-1"]);
+  });
+
+  it("requires a complete matching profile before skipping the depth questionnaire", async () => {
+    const { repository } = createRepository();
+    repository.isMatchingProfileComplete = async () => false;
+
+    await expect(skipMatchingQuestionnaire(repository, "user-1")).rejects.toThrow(
+      "Complete your matching profile before starting the questionnaire",
+    );
+  });
+
+  it("marks the depth questionnaire complete and generates matches without questionnaire answers", async () => {
+    const { repository, skippedUsers } = createRepository();
+
+    const result = await skipMatchingQuestionnaire(repository, "user-1");
+
+    expect(result).toEqual({ completed: true, matchCount: 2 });
+    expect(skippedUsers).toEqual(["user-1"]);
+  });
+
+  it("allows repeated questionnaire skips to return the same completion shape", async () => {
+    const { repository, skippedUsers } = createRepository();
+
+    await expect(skipMatchingQuestionnaire(repository, "user-1")).resolves.toEqual({ completed: true, matchCount: 2 });
+    await expect(skipMatchingQuestionnaire(repository, "user-1")).resolves.toEqual({ completed: true, matchCount: 2 });
+    expect(skippedUsers).toEqual(["user-1", "user-1"]);
   });
 });

@@ -103,6 +103,9 @@ function createRepository(answers: Record<string, string>, matchCount: number): 
     async upsertTraitsAndGenerateMatches() {
       return matchCount;
     },
+    async skipQuestionnaireAndGenerateMatches() {
+      return matchCount;
+    },
   };
 }
 

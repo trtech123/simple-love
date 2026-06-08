@@ -206,7 +206,7 @@ describe("GET /auth/callback", () => {
 
     const response = await GET(callbackRequest("?code=oauth-code&claim=valid-claim-token"));
 
-    expect(redirectPath(response)).toBe("/profile/matching");
+    expect(redirectPath(response)).toBe("/app");
     expect(state.operations).toEqual([]);
   });
 
@@ -220,12 +220,12 @@ describe("GET /auth/callback", () => {
     expect(redirectPath(response)).toBe("/register?claim=valid-claim-token&error=already_claimed");
   });
 
-  it("exchanges a no-claim OAuth code, ensures a profile, and redirects to matches by default", async () => {
+  it("exchanges a no-claim OAuth code, ensures a profile, and redirects to app by default", async () => {
     const { GET } = await import("../../src/app/auth/callback/route");
 
     const response = await GET(callbackRequest("?code=oauth-code"));
 
-    expect(redirectPath(response)).toBe("/matches");
+    expect(redirectPath(response)).toBe("/app");
     expect(state.operations).toEqual([
       {
         table: "profiles",
@@ -243,12 +243,12 @@ describe("GET /auth/callback", () => {
     expect(redirectPath(response)).toBe("/chat/conversation-1");
   });
 
-  it("redirects unsafe no-claim next paths to matches", async () => {
+  it("redirects unsafe no-claim next paths to app", async () => {
     const { GET } = await import("../../src/app/auth/callback/route");
 
     const response = await GET(callbackRequest("?code=oauth-code&next=https://evil.example/path"));
 
-    expect(redirectPath(response)).toBe("/matches");
+    expect(redirectPath(response)).toBe("/app");
   });
 
   it("redirects missing no-claim OAuth codes back to login", async () => {

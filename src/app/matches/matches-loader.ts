@@ -203,6 +203,7 @@ function isProfileComplete(
   dealBreakerKeys: string[],
 ) {
   return isMatchingProfileComplete({
+    displayName: row?.display_name,
     birthYear: row?.birth_year,
     preferredAgeMin: row?.preferred_age_min,
     preferredAgeMax: row?.preferred_age_max,

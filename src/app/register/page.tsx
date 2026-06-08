@@ -1,5 +1,6 @@
+import { Lovi } from "@/components/brand/mascot";
 import { Wordmark } from "@/components/brand/wordmark";
-import { FunnelCard, FunnelShell, IconList } from "@/components/funnel";
+import { IconList } from "@/components/funnel";
 import { FileText, HeartHandshake, Lock } from "lucide-react";
 import { RegisterClaimForm } from "./register-claim-form";
 
@@ -13,9 +14,13 @@ export default async function RegisterPage({
   const error = Array.isArray(params.error) ? params.error[0] : params.error;
 
   return (
-    <FunnelShell className="funnel-shell--wide" topSlot={<Wordmark size={26} className="funnel-brand-link" />}>
-      <FunnelCard className="register-panel register-panel--claim" aria-labelledby="register-title">
+    <main className="page-shell register-page register-page--claim" dir="rtl">
+      <section className="register-panel register-panel--claim" aria-labelledby="register-title">
         <div className="register-hero-copy">
+          <div className="register-brand-row">
+            <Lovi mood="happy" size={86} title="LovLov" />
+            <Wordmark size={34} />
+          </div>
           <p className="funnel-eyebrow">שמירת הדוח ששולם</p>
           <h1 id="register-title">יצירת חשבון אחרי התשלום</h1>
           <p>חברי את הדוח לחשבון אישי כדי לחזור אליו בכל זמן ולהמשיך לשלב ההתאמות.</p>
@@ -35,8 +40,8 @@ export default async function RegisterPage({
             <p className="form-error">נדרש קישור לדוח ששולם כדי לפתוח חשבון מהעמוד הזה.</p>
           </div>
         )}
-      </FunnelCard>
-    </FunnelShell>
+      </section>
+    </main>
   );
 }
 

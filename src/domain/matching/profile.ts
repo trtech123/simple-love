@@ -9,6 +9,7 @@ export type MatchingLocationCoordinates = {
 };
 
 export type MatchingProfileInput = {
+  displayName: string;
   birthYear: number;
   preferredAgeMin: number;
   preferredAgeMax: number;
@@ -29,6 +30,7 @@ export type MatchingProfileValue = Omit<MatchingProfileInput, "dealBreakers"> & 
 };
 
 export type MatchingProfileCompletionFields = {
+  displayName?: string | null;
   birthYear?: number | null;
   preferredAgeMin?: number | null;
   preferredAgeMax?: number | null;
@@ -46,6 +48,8 @@ export type MatchingProfileValidationResult =
 
 export type MatchingProfileValidationCode =
   | "profile_required"
+  | "display_name_required"
+  | "display_name_too_long"
   | "birth_year_invalid"
   | "preferred_age_min_invalid"
   | "preferred_age_max_invalid"
@@ -77,6 +81,7 @@ export function validateMatchingProfileInput(input: unknown): MatchingProfileVal
   const errors: MatchingProfileValidationCode[] = [];
   const currentYear = new Date().getFullYear();
   const birthYear = readInteger(record.birthYear);
+  const displayName = readDisplayName(record.displayName, errors);
   const preferredAgeMin = readInteger(record.preferredAgeMin);
   const preferredAgeMax = readInteger(record.preferredAgeMax);
   const gender = readRequiredText(record.gender, "gender", errors, 80);
@@ -135,6 +140,7 @@ export function validateMatchingProfileInput(input: unknown): MatchingProfileVal
     ok: true,
     value: {
       birthYear: birthYear as number,
+      displayName,
       preferredAgeMin: preferredAgeMin as number,
       preferredAgeMax: preferredAgeMax as number,
       gender,
@@ -155,6 +161,7 @@ export function isMatchingProfileComplete(profile: MatchingProfileCompletionFiel
 
   const validated = validateMatchingProfileInput({
     birthYear: profile.birthYear,
+    displayName: profile.displayName,
     preferredAgeMin: profile.preferredAgeMin,
     preferredAgeMax: profile.preferredAgeMax,
     gender: profile.gender,
@@ -170,6 +177,20 @@ export function isMatchingProfileComplete(profile: MatchingProfileCompletionFiel
 
 function readInteger(value: unknown) {
   return typeof value === "number" && Number.isInteger(value) ? value : null;
+}
+
+function readDisplayName(value: unknown, errors: MatchingProfileValidationCode[]) {
+  const text = typeof value === "string" ? value.trim() : "";
+
+  if (!text) {
+    errors.push("display_name_required");
+  }
+
+  if (text.length > 120) {
+    errors.push("display_name_too_long");
+  }
+
+  return text;
 }
 
 function readRequiredText(

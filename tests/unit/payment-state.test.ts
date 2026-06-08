@@ -195,7 +195,7 @@ describe("applyPaymentEvent", () => {
     expect(verifyChingSignature(rawBody, null, "whsec_test")).toBe(false);
   });
 
-  it("routes local mock checkout through the internal mock payment page", async () => {
+  it("routes local mock checkout directly to payment return without an intermediate page", async () => {
     const payment = await new MockChingAdapter().createPayment({
       paymentId: "payment-1",
       quizSessionId: "session-1",
@@ -206,7 +206,7 @@ describe("applyPaymentEvent", () => {
       failureUrl: "http://localhost:3000/payment/return?payment=payment-1&cancelled=1",
     });
 
-    expect(payment.redirectUrl).toBe("http://localhost:3000/payment/mock?payment=payment-1");
+    expect(payment.redirectUrl).toBe("http://localhost:3000/payment/return?payment=payment-1&mockPayment=paid");
   });
 
   it("upserts a CHING customer and builds a checkout session with agorot line items", async () => {

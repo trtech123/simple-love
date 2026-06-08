@@ -1,5 +1,6 @@
 import { createChatRepository, loadChatMessages } from "@/app/api/chat-repository";
 import { requireAuthenticatedUserId } from "@/app/api/matching/auth";
+import { isE2eTestMode } from "@/lib/e2e-mode";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { ChatThread } from "./chat-thread";
@@ -9,6 +10,9 @@ export const dynamic = "force-dynamic";
 type ChatPageProps = {
   params: Promise<{ conversationId: string }>;
 };
+
+const unavailableChatTitle = "\u05d4\u05e9\u05d9\u05d7\u05d4 \u05dc\u05d0 \u05d6\u05de\u05d9\u05e0\u05d4";
+const missingChatMessage = "\u05d4\u05e9\u05d9\u05d7\u05d4 \u05d4\u05d6\u05d0\u05ea \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4.";
 
 export default async function ChatPage({ params }: ChatPageProps) {
   const { conversationId } = await params;
@@ -25,12 +29,18 @@ export default async function ChatPage({ params }: ChatPageProps) {
     );
   }
 
-  const supabase = createServiceRoleClient();
+  const e2eMode = isE2eTestMode();
+
+  if (!e2eMode && !isUuid(conversationId)) {
+    return <ChatState title={unavailableChatTitle} message={missingChatMessage} />;
+  }
+
+  const supabase = e2eMode ? undefined : createServiceRoleClient();
   const repository = createChatRepository(supabase);
   const conversation = await repository.getConversation(conversationId);
 
   if (!conversation) {
-    return <ChatState title="השיחה לא זמינה" message="השיחה הזאת לא נמצאה." />;
+    return <ChatState title={unavailableChatTitle} message={missingChatMessage} />;
   }
 
   const match = await repository.getMatch(conversation.matchId);
@@ -130,4 +140,8 @@ function getDisabledReason(input: {
   }
 
   return null;
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

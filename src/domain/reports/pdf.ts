@@ -1,159 +1,283 @@
 import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import fontkit from "@pdf-lib/fontkit";
+import { PDFDocument, PDFImage, PDFFont, PDFPage, rgb } from "pdf-lib";
 import type { ReportOutput } from "./report-output";
 
 export type ReportPdfInput = ReportOutput & {
   reportNumber: string;
 };
 
-type PdfObject = {
-  id: number;
-  bytes: Buffer;
+type ReportBlock =
+  | { kind: "text"; text: string; size: number; weight: "regular" | "bold"; color: PdfColor }
+  | { kind: "spacer"; height: number }
+  | { kind: "cta" };
+
+export type ReportPdfLayout = {
+  page: { width: number; height: number };
+  marginX: number;
+  topY: number;
+  bottomY: number;
+  ctaImage: { width: number; height: number };
+  pages: Array<{
+    blocks: Array<{ kind: "text" | "cta"; y: number; height: number }>;
+    text: PdfTextLayout[];
+    cta?: PdfCtaLayout;
+  }>;
 };
 
-const PAGE_WIDTH = 595;
-const PAGE_HEIGHT = 842;
+type PdfTextLayout = {
+  text: string;
+  visualText: string;
+  x: number;
+  y: number;
+  width: number;
+  size: number;
+  weight: "regular" | "bold";
+  color: PdfColor;
+};
+
+type PdfCtaLayout = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  image: { x: number; y: number; width: number; height: number };
+};
+
+type PdfColor = {
+  r: number;
+  g: number;
+  b: number;
+};
+
+type TextMetrics = Pick<PDFFont, "widthOfTextAtSize" | "heightAtSize">;
+
+const PAGE_WIDTH = 595.28;
+const PAGE_HEIGHT = 841.89;
 const MARGIN_X = 56;
-const TOP_Y = 780;
-const BOTTOM_Y = 64;
-const BODY_SIZE = 12;
+const TOP_Y = 784;
+const BOTTOM_Y = 58;
+const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
+const BODY_SIZE = 11.5;
+const SMALL_SIZE = 9.5;
 const HEADING_SIZE = 16;
+const TITLE_SIZE = 24;
+const CTA_WIDTH = CONTENT_WIDTH;
+const CTA_HEIGHT = 128;
+const CTA_IMAGE_WIDTH = 144;
+const CTA_IMAGE_HEIGHT = 96;
+
+const TEXT = color(0.12, 0.1, 0.1);
+const MUTED = color(0.42, 0.35, 0.35);
+const PRIMARY = color(0.62, 0.12, 0.28);
 
 export function createReportPdfStoragePath(reportId: string, reportNumber: string) {
   const safeReportNumber = reportNumber.replace(/[^A-Za-z0-9-]/g, "-");
   return `reports/${reportId}/${safeReportNumber}.pdf`;
 }
 
-export function createReportPdfBytes(input: ReportPdfInput) {
-  const pages = paginateReport(input);
-  const objects: PdfObject[] = [];
-  const catalogId = 1;
-  const pagesId = 2;
-  const fontId = 3;
-  const cidFontId = 4;
-  const descriptorId = 5;
-  const fontFileId = 6;
-  const toUnicodeId = 7;
-  const firstPageId = 8;
-  const pageIds = pages.map((_, index) => firstPageId + index * 2);
-  const contentIds = pages.map((_, index) => firstPageId + index * 2 + 1);
+export async function createReportPdfBytes(input: ReportPdfInput) {
+  const pdf = await PDFDocument.create();
+  pdf.registerFontkit(fontkit);
 
-  objects.push({ id: catalogId, bytes: ascii(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`) });
-  objects.push({
-    id: pagesId,
-    bytes: ascii(`<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`),
+  const fontBytes = asPdfBytes(readHebrewFontBytes());
+  const regularFont = await pdf.embedFont(fontBytes, { subset: true });
+  const boldFont = await pdf.embedFont(fontBytes, { subset: true });
+  const ctaImage = await readCtaImage(pdf);
+  const layout = createReportPdfLayout(input, {
+    regular: regularFont,
+    bold: boldFont,
   });
 
-  objects.push({
-    id: fontId,
-    bytes: ascii(
-      `<< /Type /Font /Subtype /Type0 /BaseFont /ArialUnicode /Encoding /Identity-H /DescendantFonts [${cidFontId} 0 R] /ToUnicode ${toUnicodeId} 0 R >>`,
-    ),
-  });
-  objects.push({
-    id: cidFontId,
-    bytes: ascii(
-      `<< /Type /Font /Subtype /CIDFontType2 /BaseFont /ArialUnicode /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor ${descriptorId} 0 R /CIDToGIDMap /Identity >>`,
-    ),
-  });
-  objects.push({
-    id: descriptorId,
-    bytes: ascii(
-      `<< /Type /FontDescriptor /FontName /ArialUnicode /Flags 4 /FontBBox [-665 -325 2000 1040] /ItalicAngle 0 /Ascent 905 /Descent -212 /CapHeight 716 /StemV 80 /FontFile2 ${fontFileId} 0 R >>`,
-    ),
-  });
-  objects.push({ id: fontFileId, bytes: streamObject(readHebrewFontBytes(), { Length1: readHebrewFontBytes().length }) });
-  objects.push({ id: toUnicodeId, bytes: streamObject(ascii(createToUnicodeCMap())) });
+  for (const pageLayout of layout.pages) {
+    const page = pdf.addPage([layout.page.width, layout.page.height]);
+    drawPageBackground(page);
 
-  for (const [index, pageLines] of pages.entries()) {
-    const content = createPageContent(pageLines);
-    objects.push({
-      id: pageIds[index],
-      bytes: ascii(
-        `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentIds[index]} 0 R >>`,
-      ),
-    });
-    objects.push({ id: contentIds[index], bytes: streamObject(content) });
+    for (const line of pageLayout.text) {
+      page.drawText(line.visualText, {
+        x: line.x,
+        y: line.y,
+        size: line.size,
+        font: line.weight === "bold" ? boldFont : regularFont,
+        color: rgb(line.color.r, line.color.g, line.color.b),
+      });
+    }
+
+    if (pageLayout.cta) {
+      drawCta(page, pageLayout.cta, ctaImage, regularFont, boldFont);
+    }
   }
 
-  return new Uint8Array(buildPdf(objects, catalogId));
+  return pdf.save();
 }
 
-type PdfLine = {
-  text: string;
-  size: number;
-  y: number;
-};
-
-function paginateReport(input: ReportPdfInput): PdfLine[][] {
-  const blocks: Array<{ heading?: string; body: string[] }> = [
-    { body: [input.reportNumber, input.title, input.openingSummary] },
-    { heading: "הארכיטיפ שלך", body: [input.archetypeExplanation] },
-    { heading: "דפוס רגשי בקשר", body: [input.emotionalRelationshipPattern] },
-    { heading: "חוזקות", body: input.strengths },
-    { heading: "חסמים", body: input.blockers },
-    { heading: "צרכים בקשר", body: input.relationshipNeeds },
-    { heading: "הכוונה לדייטינג", body: input.datingGuidance },
-    { heading: "הכוונה להתאמות", body: input.matchingGuidance },
-    { heading: "תוכנית פעולה ל-7 ימים", body: input.sevenDayActionPlan },
-    { heading: "שאלות לרפלקציה", body: input.reflectionQuestions },
-    { body: [input.disclaimer] },
-  ];
-
-  const pages: PdfLine[][] = [[]];
+export function createReportPdfLayout(
+  input: ReportPdfInput,
+  fonts: { regular: TextMetrics; bold: TextMetrics } = createApproximateFonts(),
+): ReportPdfLayout {
+  const pages: ReportPdfLayout["pages"] = [{ blocks: [], text: [] }];
   let y = TOP_Y;
 
-  const addLine = (text: string, size: number) => {
-    if (y < BOTTOM_Y) {
-      pages.push([]);
-      y = TOP_Y;
+  const currentPage = () => pages[pages.length - 1];
+  const newPage = () => {
+    pages.push({ blocks: [], text: [] });
+    y = TOP_Y;
+  };
+  const ensureSpace = (height: number) => {
+    if (y - height < BOTTOM_Y) {
+      newPage();
     }
-    pages[pages.length - 1].push({ text, size, y });
-    y -= size + 8;
+  };
+  const addSpacer = (height: number) => {
+    y -= height;
+  };
+  const addText = (block: Extract<ReportBlock, { kind: "text" }>) => {
+    const font = block.weight === "bold" ? fonts.bold : fonts.regular;
+    const lineHeight = Math.ceil(block.size * 1.5);
+    const lines = wrapTextByWidth(block.text, CONTENT_WIDTH, block.size, font);
+
+    for (const line of lines) {
+      ensureSpace(lineHeight);
+      const blockY = y - lineHeight;
+      const textY = blockY + Math.max(2, (lineHeight - block.size) / 2);
+      const visualText = toVisualRtl(line);
+      const width = Math.min(font.widthOfTextAtSize(visualText, block.size), CONTENT_WIDTH);
+      const x = PAGE_WIDTH - MARGIN_X - width;
+      currentPage().text.push({
+        text: line,
+        visualText,
+        x,
+        y: textY,
+        width,
+        size: block.size,
+        weight: block.weight,
+        color: block.color,
+      });
+      currentPage().blocks.push({ kind: "text", y: blockY, height: lineHeight });
+      y -= lineHeight;
+    }
+  };
+  const addCta = () => {
+    ensureSpace(CTA_HEIGHT + 18);
+    const top = y - 10;
+    const cta: PdfCtaLayout = {
+      x: MARGIN_X,
+      y: top - CTA_HEIGHT,
+      width: CTA_WIDTH,
+      height: CTA_HEIGHT,
+      image: {
+        x: MARGIN_X + CTA_WIDTH - CTA_IMAGE_WIDTH - 16,
+        y: top - CTA_IMAGE_HEIGHT - 16,
+        width: CTA_IMAGE_WIDTH,
+        height: CTA_IMAGE_HEIGHT,
+      },
+    };
+    currentPage().cta = cta;
+    currentPage().blocks.push({ kind: "cta", y: cta.y, height: cta.height });
+    y = cta.y - 18;
   };
 
-  for (const block of blocks) {
-    if (block.heading) {
-      y -= 8;
-      addLine(block.heading, HEADING_SIZE);
-    }
-    for (const item of block.body) {
-      for (const line of wrapHebrewText(item, block.heading ? 68 : 58)) {
-        addLine(line, BODY_SIZE);
-      }
+  for (const block of createReportBlocks(input)) {
+    if (block.kind === "spacer") {
+      addSpacer(block.height);
+    } else if (block.kind === "cta") {
+      addCta();
+    } else {
+      addText(block);
     }
   }
 
-  return pages;
+  return {
+    page: { width: PAGE_WIDTH, height: PAGE_HEIGHT },
+    marginX: MARGIN_X,
+    topY: TOP_Y,
+    bottomY: BOTTOM_Y,
+    ctaImage: { width: CTA_IMAGE_WIDTH, height: CTA_IMAGE_HEIGHT },
+    pages,
+  };
 }
 
-function createPageContent(lines: PdfLine[]) {
-  const commands = [`% ${escapePdfComment(lines[0]?.text ?? "report")}`, "BT", "/F1 12 Tf"];
-  for (const line of lines) {
-    commands.push(`/F1 ${line.size} Tf`);
-    commands.push(`1 0 0 1 ${PAGE_WIDTH - MARGIN_X} ${line.y} Tm`);
-    commands.push(`${utf16Hex(toVisualRtl(line.text))} Tj`);
+function createReportBlocks(input: ReportPdfInput): ReportBlock[] {
+  const blocks: ReportBlock[] = [
+    textBlock("LovLov", SMALL_SIZE, "bold", PRIMARY),
+    textBlock(input.reportNumber, SMALL_SIZE, "regular", MUTED),
+    { kind: "spacer", height: 10 },
+    textBlock(input.title, TITLE_SIZE, "bold", TEXT),
+    { kind: "spacer", height: 8 },
+    textBlock(input.openingSummary, BODY_SIZE, "regular", TEXT),
+  ];
+
+  for (const section of createReportSections(input)) {
+    blocks.push({ kind: "spacer", height: 14 });
+    blocks.push(textBlock(section.title, HEADING_SIZE, "bold", PRIMARY));
+    for (const item of section.items) {
+      blocks.push(textBlock(item, BODY_SIZE, "regular", TEXT));
+      blocks.push({ kind: "spacer", height: 3 });
+    }
   }
-  commands.push("ET");
-  return ascii(commands.join("\n"));
+
+  blocks.push({ kind: "spacer", height: 12 });
+  blocks.push(textBlock(input.disclaimer, SMALL_SIZE, "regular", MUTED));
+  blocks.push({ kind: "spacer", height: 16 });
+  blocks.push({ kind: "cta" });
+
+  return blocks;
 }
 
-function escapePdfComment(value: string) {
-  return value.replace(/[^\x20-\x7E]/g, "").replace(/[\r\n]/g, " ");
+function createReportSections(input: ReportPdfInput) {
+  return [
+    { title: "הארכיטיפ שלך", items: [input.archetypeExplanation] },
+    { title: "דפוס רגשי בקשר", items: [input.emotionalRelationshipPattern] },
+    { title: "חוזקות", items: input.strengths.map(numbered) },
+    { title: "חסמים", items: input.blockers.map(numbered) },
+    { title: "צרכים בקשר", items: input.relationshipNeeds.map(numbered) },
+    { title: "הכוונה לדייטינג", items: input.datingGuidance.map(numbered) },
+    { title: "הכוונה להתאמות", items: input.matchingGuidance.map(numbered) },
+    { title: "תוכנית פעולה ל-7 ימים", items: input.sevenDayActionPlan.map(numbered) },
+    { title: "שאלות לרפלקציה", items: input.reflectionQuestions.map(numbered) },
+  ];
 }
 
-function wrapHebrewText(value: string, maxChars: number) {
+function numbered(item: string, index: number) {
+  return `${index + 1}. ${item}`;
+}
+
+function textBlock(text: string, size: number, weight: "regular" | "bold", colorValue: PdfColor): ReportBlock {
+  return { kind: "text", text, size, weight, color: colorValue };
+}
+
+function wrapTextByWidth(value: string, maxWidth: number, size: number, font: TextMetrics) {
+  const paragraphs = value.split(/\r?\n/);
+  const lines = paragraphs.flatMap((paragraph) => wrapParagraph(paragraph, maxWidth, size, font));
+  return lines.length ? lines : [""];
+}
+
+function wrapParagraph(value: string, maxWidth: number, size: number, font: TextMetrics) {
   const words = value.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = "";
 
   for (const word of words) {
     const next = current ? `${current} ${word}` : word;
-    if (next.length > maxChars && current) {
-      lines.push(current);
-      current = word;
-    } else {
+    if (measureVisualText(next, size, font) <= maxWidth) {
       current = next;
+      continue;
     }
+
+    if (current) {
+      lines.push(current);
+      current = "";
+    }
+
+    if (measureVisualText(word, size, font) <= maxWidth) {
+      current = word;
+      continue;
+    }
+
+    const splitWords = splitLongWord(word, maxWidth, size, font);
+    lines.push(...splitWords.slice(0, -1));
+    current = splitWords.at(-1) ?? "";
   }
 
   if (current) {
@@ -163,94 +287,167 @@ function wrapHebrewText(value: string, maxChars: number) {
   return lines.length ? lines : [value];
 }
 
+function splitLongWord(word: string, maxWidth: number, size: number, font: TextMetrics) {
+  const parts: string[] = [];
+  let current = "";
+
+  for (const char of [...word]) {
+    const next = `${current}${char}`;
+    if (current && measureVisualText(next, size, font) > maxWidth) {
+      parts.push(current);
+      current = char;
+    } else {
+      current = next;
+    }
+  }
+
+  if (current) {
+    parts.push(current);
+  }
+
+  return parts;
+}
+
+function measureVisualText(value: string, size: number, font: TextMetrics) {
+  return font.widthOfTextAtSize(toVisualRtl(value), size);
+}
+
 function toVisualRtl(value: string) {
   return /[\u0590-\u05FF]/.test(value) ? [...value].reverse().join("") : value;
 }
 
-function utf16Hex(value: string) {
-  const bytes: number[] = [0xfe, 0xff];
-  for (const char of value) {
-    const code = char.codePointAt(0) ?? 0x20;
-    if (code <= 0xffff) {
-      bytes.push(code >> 8, code & 0xff);
-    }
-  }
-  return `<${Buffer.from(bytes).toString("hex").toUpperCase()}>`;
+function drawPageBackground(page: PDFPage) {
+  page.drawRectangle({
+    x: 0,
+    y: 0,
+    width: PAGE_WIDTH,
+    height: PAGE_HEIGHT,
+    color: rgb(0.995, 0.985, 0.975),
+  });
+}
+
+function drawCta(page: PDFPage, cta: PdfCtaLayout, image: PDFImage, regularFont: PDFFont, boldFont: PDFFont) {
+  page.drawRectangle({
+    x: cta.x,
+    y: cta.y,
+    width: cta.width,
+    height: cta.height,
+    color: rgb(0.99, 0.94, 0.91),
+    borderColor: rgb(0.86, 0.72, 0.72),
+    borderWidth: 1,
+  });
+  page.drawImage(image, {
+    x: cta.image.x,
+    y: cta.image.y,
+    width: cta.image.width,
+    height: cta.image.height,
+  });
+
+  const textRight = cta.image.x - 20;
+  const textWidth = textRight - cta.x - 18;
+  drawRightAlignedText(page, "השלב הבא", textRight, cta.y + cta.height - 30, textWidth, 9, boldFont, PRIMARY);
+  drawRightAlignedText(
+    page,
+    "להפוך את התובנה להתאמות",
+    textRight,
+    cta.y + cta.height - 54,
+    textWidth,
+    15,
+    boldFont,
+    TEXT,
+  );
+  drawRightAlignedText(
+    page,
+    "המשך להתאמות   |   אימייל   |   WhatsApp",
+    textRight,
+    cta.y + 28,
+    textWidth,
+    10.5,
+    regularFont,
+    PRIMARY,
+  );
+}
+
+function drawRightAlignedText(
+  page: PDFPage,
+  value: string,
+  rightX: number,
+  y: number,
+  maxWidth: number,
+  size: number,
+  font: PDFFont,
+  colorValue: PdfColor,
+) {
+  const visualText = toVisualRtl(value);
+  const width = Math.min(font.widthOfTextAtSize(visualText, size), maxWidth);
+  page.drawText(visualText, {
+    x: rightX - width,
+    y,
+    size,
+    font,
+    color: rgb(colorValue.r, colorValue.g, colorValue.b),
+  });
+}
+
+async function readCtaImage(pdf: PDFDocument) {
+  const imagePath = path.join(process.cwd(), "public", "landing-couple.png");
+  const bytes = asPdfBytes(readFileSync(imagePath));
+  return pdf.embedPng(bytes);
 }
 
 function readHebrewFontBytes() {
   const candidates = [
     process.env.REPORT_PDF_FONT_PATH,
     "C:/Windows/Fonts/arial.ttf",
+    "C:/Windows/Fonts/seguiemj.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-  ].filter((path): path is string => Boolean(path));
-  const fontPath = candidates.find((path) => existsSync(path));
+  ].filter((candidate): candidate is string => Boolean(candidate));
+  const fontPath = candidates.find((candidate) => existsSync(candidate));
 
-  return fontPath ? readFileSync(fontPath) : Buffer.from([]);
-}
-
-function createToUnicodeCMap() {
-  return `/CIDInit /ProcSet findresource begin
-12 dict begin
-begincmap
-/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def
-/CMapName /Adobe-Identity-UCS def
-/CMapType 2 def
-1 begincodespacerange
-<0000> <FFFF>
-endcodespacerange
-1 beginbfrange
-<0000> <FFFF> <0000>
-endbfrange
-endcmap
-CMapName currentdict /CMap defineresource pop
-end
-end`;
-}
-
-function buildPdf(objects: PdfObject[], catalogId: number) {
-  const parts: Buffer[] = [ascii("%PDF-1.7\n")];
-  const offsets = new Map<number, number>();
-  let length = parts[0].length;
-
-  for (const object of objects.sort((a, b) => a.id - b.id)) {
-    offsets.set(object.id, length);
-    const header = ascii(`${object.id} 0 obj\n`);
-    const footer = ascii("\nendobj\n");
-    parts.push(header, object.bytes, footer);
-    length += header.length + object.bytes.length + footer.length;
+  if (!fontPath) {
+    throw new Error("No Hebrew-capable font found for report PDF generation");
   }
 
-  const xrefOffset = length;
-  const maxId = Math.max(...objects.map((object) => object.id));
-  const xref = [
-    `xref`,
-    `0 ${maxId + 1}`,
-    "0000000000 65535 f ",
-    ...Array.from({ length: maxId }, (_, index) => {
-      const offset = offsets.get(index + 1) ?? 0;
-      return `${String(offset).padStart(10, "0")} 00000 n `;
-    }),
-    `trailer`,
-    `<< /Size ${maxId + 1} /Root ${catalogId} 0 R >>`,
-    `startxref`,
-    String(xrefOffset),
-    "%%EOF",
-    "",
-  ].join("\n");
-  parts.push(ascii(xref));
-
-  return Buffer.concat(parts);
+  return readFileSync(fontPath);
 }
 
-function streamObject(bytes: Buffer, extra: Record<string, number> = {}) {
-  const dictItems = Object.entries({ Length: bytes.length, ...extra })
-    .map(([key, value]) => `/${key} ${value}`)
-    .join(" ");
-  return Buffer.concat([ascii(`<< ${dictItems} >>\nstream\n`), bytes, ascii("\nendstream")]);
+function createApproximateFonts(): { regular: TextMetrics; bold: TextMetrics } {
+  const regular = createApproximateFont(0.55);
+  return {
+    regular,
+    bold: createApproximateFont(0.59),
+  };
 }
 
-function ascii(value: string) {
-  return Buffer.from(value, "latin1");
+function createApproximateFont(widthFactor: number): TextMetrics {
+  return {
+    widthOfTextAtSize(text: string, size: number) {
+      return [...text].reduce((total, char) => total + approximateCharWidth(char, size, widthFactor), 0);
+    },
+    heightAtSize(size: number) {
+      return size;
+    },
+  };
+}
+
+function approximateCharWidth(char: string, size: number, widthFactor: number) {
+  if (/\s/.test(char)) {
+    return size * 0.28;
+  }
+  if (/[ilI.,:|]/.test(char)) {
+    return size * 0.24;
+  }
+  if (/[\u0590-\u05FF]/.test(char)) {
+    return size * 0.52;
+  }
+  return size * widthFactor;
+}
+
+function color(r: number, g: number, b: number): PdfColor {
+  return { r, g, b };
+}
+
+function asPdfBytes(bytes: Buffer) {
+  return new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 }

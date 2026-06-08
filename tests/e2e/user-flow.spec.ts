@@ -44,6 +44,17 @@ test("user can complete the real quiz flow and reach checkout", async ({ page })
     });
   });
 
+  await page.route("**/api/quiz/sessions/public-token", async (route) => {
+    await route.fulfill({
+      json: {
+        publicToken: "public-token",
+        status: "started",
+        questionnaire,
+        answers: {},
+      },
+    });
+  });
+
   await page.route("**/api/quiz/sessions/public-token/answers", async (route) => {
     await route.fulfill({ json: { ok: true } });
   });
@@ -56,20 +67,28 @@ test("user can complete the real quiz flow and reach checkout", async ({ page })
     await route.fulfill({ json: { paymentId: "payment-1", redirectUrl: "/payment/return?payment=payment-1" } });
   });
 
+  await page.route("**/api/payments/status?payment=payment-1", async (route) => {
+    await route.fulfill({ json: { state: "payment_pending" } });
+  });
+
   await page.goto("/quiz");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await expect(page.getByText("1 / 22")).toBeVisible();
-  await expect(page.getByRole("button", { name: "המשך" })).toHaveCount(0);
+  await expect(page.getByText("1 מתוך 22")).toBeVisible();
 
   for (let index = 1; index <= 22; index += 1) {
     await page.getByRole("radio", { name: `××¤×©×¨×•×ª ${index}×` }).click();
 
     if (index < 22) {
-      await expect(page.getByText(`${index + 1} / 22`)).toBeVisible();
+      if (index === 11) {
+        await page.getByRole("button", { name: "להמשיך" }).click();
+      }
+      await expect(page.getByText(`${index + 1} מתוך 22`)).toBeVisible();
     }
   }
 
-  await page.locator(".quiz-actions .primary-button").click();
+  await page.evaluate(() => {
+    document.querySelector<HTMLButtonElement>(".quiz-reference-continue")?.click();
+  });
   await expect(page).toHaveURL("/payment/return?payment=payment-1");
 });
 
@@ -94,6 +113,17 @@ test("quiz retries one transient answer save failure before advancing", async ({
     });
   });
 
+  await page.route("**/api/quiz/sessions/retry-token", async (route) => {
+    await route.fulfill({
+      json: {
+        publicToken: "retry-token",
+        status: "started",
+        questionnaire: matchingQuestionnaire,
+        answers: {},
+      },
+    });
+  });
+
   await page.route("**/api/quiz/sessions/retry-token/answers", async (route) => {
     answerCalls += 1;
 
@@ -105,12 +135,13 @@ test("quiz retries one transient answer save failure before advancing", async ({
     await route.fulfill({ json: { ok: true } });
   });
 
-  await page.goto("/quiz");
-  await expect(page.getByText("1 / 2")).toBeVisible();
+  await page.goto("/quiz?session=retry-token");
+  await expect(page.getByText("1 מתוך 2")).toBeVisible();
 
   await page.getByRole("radio", { name: "Match option 1A" }).click();
 
-  await expect(page.getByText("2 / 2")).toBeVisible();
+  await page.getByRole("button", { name: "להמשיך" }).click();
+  await expect(page.getByText("2 מתוך 2")).toBeVisible();
   expect(answerCalls).toBe(2);
 });
 
@@ -289,10 +320,10 @@ test("user completes matching profile before starting matching questionnaire", a
   await page.getByRole("button", { name: "שמירה והמשך" }).click();
 
   await expect(page).toHaveURL(/\/matching\/questionnaire/);
-  await expect(page.getByText("1 / 2")).toBeVisible();
+  await expect(page.getByText("1 מתוך 2")).toBeVisible();
 
   await page.getByRole("radio", { name: "Match option 1A" }).click();
-  await expect(page.getByText("2 / 2")).toBeVisible();
+  await expect(page.getByText("2 מתוך 2")).toBeVisible();
 
   await page.getByRole("radio", { name: "Match option 2A" }).click();
   await page.locator(".quiz-actions .primary-button").click();

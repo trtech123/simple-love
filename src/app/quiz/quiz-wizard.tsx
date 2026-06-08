@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { CheckCircle2 } from "lucide-react";
-import { FunnelCard, FunnelShell, FunnelStateIcon, ProgressHeader } from "@/components/funnel";
+import { Lovi } from "@/components/brand/mascot";
+import { Wordmark } from "@/components/brand/wordmark";
+import { FunnelCard, FunnelShell, ProgressHeader } from "@/components/funnel";
 import type { QuizQuestionnaire } from "@/domain/quiz/types";
 
 type QuizPayload = {
@@ -24,7 +25,7 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
   const [loading, setLoading] = useState(true);
   const [savingQuestionId, setSavingQuestionId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [showMilestone, setShowMilestone] = useState(false);
+  const [showProgressCheckpoint, setShowProgressCheckpoint] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const config =
@@ -47,6 +48,8 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
           submittingLabel: "מסיימים...",
           progressLabel: "דוח אישי",
         };
+  const shellClassName = mode === "matching" ? "funnel-shell--wide quiz-shell quiz-shell--matching" : undefined;
+  const panelClassName = mode === "matching" ? "quiz-panel quiz-panel--matching" : "quiz-panel";
 
   useEffect(() => {
     if (bootstrapped.current) {
@@ -72,6 +75,57 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
 
     return Math.round(((currentIndex + 1) / questions.length) * 100);
   }, [currentIndex, questions.length]);
+  useEffect(() => {
+    if (
+      mode !== "paid_report" ||
+      loading ||
+      showProgressCheckpoint ||
+      !payload ||
+      !currentQuestion ||
+      savingQuestionId !== null
+    ) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (/^[1-5]$/.test(event.key)) {
+        const option = currentQuestion.options[Number(event.key) - 1];
+        if (option) {
+          event.preventDefault();
+          void selectAnswer(currentQuestion.id, option.id);
+        }
+        return;
+      }
+
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    currentIndex,
+    currentQuestion,
+    loading,
+    mode,
+    payload,
+    questions.length,
+    savingQuestionId,
+    showProgressCheckpoint,
+  ]);
 
   async function loadOrCreateSession() {
     setLoading(true);
@@ -110,7 +164,15 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
     }
 
     const previousAnswers = payload.answers;
-    setPayload({ ...payload, answers: { ...payload.answers, [questionId]: questionOptionId } });
+    const nextAnswers = { ...payload.answers, [questionId]: questionOptionId };
+    const nextPayload = { ...payload, answers: nextAnswers };
+    const shouldShowProgressCheckpoint = didCrossHalfwayCheckpoint(questions, previousAnswers, nextAnswers);
+    const shouldSubmitPaidQuiz =
+      mode === "paid_report" &&
+      currentIndex === questions.length - 1 &&
+      countAnsweredQuestions(questions, nextAnswers) === questions.length;
+
+    setPayload(nextPayload);
     setSavingQuestionId(questionId);
     setError(null);
 
@@ -120,8 +182,10 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
         questionOptionId,
       });
 
-      if (mode === "paid_report" && currentIndex === 6 && questions.length > 7) {
-        setShowMilestone(true);
+      if (shouldSubmitPaidQuiz) {
+        await submitQuiz(nextPayload);
+      } else if (shouldShowProgressCheckpoint) {
+        setShowProgressCheckpoint(true);
       } else if (currentIndex < questions.length - 1) {
         setCurrentIndex((index) => (index === currentIndex ? index + 1 : index));
       }
@@ -133,8 +197,8 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
     }
   }
 
-  async function submitQuiz() {
-    if (!payload || !allAnswered) {
+  async function submitQuiz(payloadOverride = payload) {
+    if (!payloadOverride || countAnsweredQuestions(questions, payloadOverride.answers) !== questions.length) {
       return;
     }
 
@@ -143,7 +207,7 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
 
     try {
       await readJsonResponse(
-        await fetch(`${config.sessionsPath}/${encodeURIComponent(payload.publicToken)}/complete`, {
+        await fetch(`${config.sessionsPath}/${encodeURIComponent(payloadOverride.publicToken)}/complete`, {
           method: "POST",
         }),
       );
@@ -157,7 +221,7 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
         await fetch("/api/payments/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionToken: payload.publicToken }),
+          body: JSON.stringify({ sessionToken: payloadOverride.publicToken }),
         }),
       );
       window.location.href = checkout.redirectUrl;
@@ -200,7 +264,7 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
 
   if (loading) {
     return (
-      <FunnelShell>
+      <FunnelShell className={shellClassName}>
         <FunnelCard className="quiz-panel--loading" aria-live="polite">
           <div className="skeleton skeleton-title" />
           <div className="skeleton skeleton-line" />
@@ -212,7 +276,7 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
 
   if (!payload || !currentQuestion) {
     return (
-      <FunnelShell>
+      <FunnelShell className={shellClassName}>
         <FunnelCard>
           <p className="funnel-eyebrow">LovLov</p>
           <h1>השאלון לא נטען</h1>
@@ -225,34 +289,103 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
     );
   }
 
-  if (showMilestone) {
+  if (showProgressCheckpoint) {
+    const remainingCount = Math.max(0, questions.length - answeredCount);
+    const checkpointPercent = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0;
+
     return (
-      <FunnelShell showBrand={false}>
-        <ProgressHeader current={Math.min(currentIndex + 1, questions.length)} total={questions.length} label={config.progressLabel} />
-        <FunnelCard className="quiz-milestone" aria-labelledby="quiz-milestone-title">
-          <FunnelStateIcon icon={CheckCircle2} />
-          <p className="funnel-eyebrow">כבר יש בסיס לדוח</p>
-          <h1 id="quiz-milestone-title">ענית על החלק הראשון</h1>
-          <p>עכשיו נשאר לדייק את הדפוסים שחוזרים בקשרים, כדי שהדוח ירגיש אישי ולא כללי.</p>
-          <button
-            className="primary-button"
-            type="button"
-            onClick={() => {
-              setShowMilestone(false);
-              setCurrentIndex((index) => Math.max(index, 7));
-            }}
-          >
-            להמשיך לשאלות הבאות
-          </button>
-        </FunnelCard>
-      </FunnelShell>
+      <QuizProgressCheckpoint
+        answeredCount={answeredCount}
+        remainingCount={remainingCount}
+        progressPercent={checkpointPercent}
+        onContinue={() => {
+          setShowProgressCheckpoint(false);
+          setCurrentIndex((index) => Math.min(questions.length - 1, index + 1));
+        }}
+      />
+    );
+  }
+
+  if (mode === "paid_report") {
+    return (
+      <main className="quiz-reference-page" dir="rtl">
+        <div className="quiz-reference-inner">
+          <header className="quiz-reference-topbar">
+            <div className="quiz-reference-brand" aria-label="LovLov">
+              <Wordmark size={24} />
+            </div>
+          </header>
+
+          <section className="quiz-reference-progress" aria-label="התקדמות השאלון">
+            <div className="quiz-reference-progress-meta">
+              <span>{config.progressLabel}</span>
+              <span>
+                {currentIndex + 1} מתוך {questions.length}
+              </span>
+            </div>
+            <div className="quiz-reference-progress-track" aria-hidden="true">
+              <span style={{ width: `${progressPercent}%` }} />
+            </div>
+          </section>
+
+          <section className="quiz-reference-main" aria-labelledby="quiz-title">
+            <div className="quiz-reference-lovi" aria-hidden="true">
+              <Lovi size={46} mood="smile" />
+            </div>
+            <p className="quiz-reference-number">שאלה {String(currentIndex + 1).padStart(2, "0")}</p>
+            <h1 id="quiz-title" className="quiz-reference-question">
+              {currentQuestion.prompt}
+            </h1>
+            <p className="quiz-reference-helper">ענה לפי מה שאתה באמת מרגיש, לא לפי מה שאתה חושב שצריך להרגיש.</p>
+
+            <div className="quiz-reference-answers" role="radiogroup" aria-label={currentQuestion.prompt}>
+              {currentQuestion.options.map((option) => {
+                const selected = selectedOptionId === option.id;
+
+                return (
+                  <button
+                    className={["quiz-reference-option", selected ? "quiz-reference-option--selected" : ""]
+                      .filter(Boolean)
+                      .join(" ")}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    disabled={savingQuestionId === currentQuestion.id}
+                    key={option.id}
+                    onClick={() => void selectAnswer(currentQuestion.id, option.id)}
+                  >
+                    <span className="quiz-reference-radio" aria-hidden="true" />
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {error ? <p className="form-error quiz-reference-error">{error}</p> : null}
+
+            <div className="quiz-reference-actions">
+              <button
+                className="quiz-reference-back"
+                type="button"
+                disabled={currentIndex === 0 || savingQuestionId !== null}
+                onClick={() => {
+                  setShowProgressCheckpoint(false);
+                  setCurrentIndex((index) => Math.max(0, index - 1));
+                }}
+              >
+                → חזרה
+              </button>
+            </div>
+          </section>
+        </div>
+      </main>
     );
   }
 
   return (
-    <FunnelShell showBrand={false}>
+    <FunnelShell showBrand={false} className={shellClassName}>
       <ProgressHeader current={currentIndex + 1} total={questions.length} label={config.progressLabel} />
-      <FunnelCard className="quiz-panel" aria-labelledby="quiz-title">
+      <FunnelCard className={panelClassName} aria-labelledby="quiz-title">
         <p className="funnel-eyebrow">{config.title}</p>
         <h1 id="quiz-title">
           שאלה {currentIndex + 1} מתוך {questions.length}
@@ -303,7 +436,7 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
             type="button"
             disabled={currentIndex === 0 || savingQuestionId !== null}
             onClick={() => {
-              setShowMilestone(false);
+              setShowProgressCheckpoint(false);
               setCurrentIndex((index) => Math.max(0, index - 1));
             }}
           >
@@ -351,6 +484,61 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
         </p>
       </FunnelCard>
     </FunnelShell>
+  );
+}
+
+function QuizProgressCheckpoint({
+  answeredCount,
+  remainingCount,
+  progressPercent,
+  onContinue,
+}: {
+  answeredCount: number;
+  remainingCount: number;
+  progressPercent: number;
+  onContinue: () => void;
+}) {
+  const estimatedMinutes = Math.max(1, Math.ceil(remainingCount * 0.45));
+
+  return (
+    <main className="quiz-progress-checkpoint" dir="rtl">
+      <section className="quiz-progress-checkpoint__panel" aria-labelledby="quiz-progress-checkpoint-title">
+        <div className="quiz-progress-checkpoint__mascot" aria-hidden="true">
+          <div className="quiz-progress-checkpoint__mascot-face">
+            <span className="quiz-progress-checkpoint__eye quiz-progress-checkpoint__eye--right" />
+            <span className="quiz-progress-checkpoint__eye quiz-progress-checkpoint__eye--left" />
+            <span className="quiz-progress-checkpoint__smile" />
+          </div>
+        </div>
+        <p className="quiz-progress-checkpoint__kicker">כבר באמצע · {progressPercent}%</p>
+        <h1 id="quiz-progress-checkpoint-title">
+          את/ה בונה
+          <span>תמונה אמיתית.</span>
+        </h1>
+        <p className="quiz-progress-checkpoint__copy">
+          נשארו עוד {remainingCount} שאלות, וכל תשובה מקרבת את LovLov להבנה מדויקת יותר של מה באמת מתאים לך.
+        </p>
+
+        <dl className="quiz-progress-checkpoint__stats" aria-label="מצב ההתקדמות">
+          <div>
+            <dt>{answeredCount}</dt>
+            <dd>שאלות נענו</dd>
+          </div>
+          <div>
+            <dt>~{estimatedMinutes}</dt>
+            <dd>דקות נשארו</dd>
+          </div>
+          <div>
+            <dt>3</dt>
+            <dd>תכונות מתגלות</dd>
+          </div>
+        </dl>
+
+        <button className="quiz-progress-checkpoint__button" type="button" onClick={onContinue}>
+          להמשיך
+        </button>
+      </section>
+    </main>
   );
 }
 
@@ -427,6 +615,22 @@ function findFirstUnansweredQuestionIndex(
 
 function countAnsweredQuestions(questions: QuizPayload["questionnaire"]["questions"], answers: QuizPayload["answers"]) {
   return questions.reduce((count, question) => (answers[question.id] ? count + 1 : count), 0);
+}
+
+function didCrossHalfwayCheckpoint(
+  questions: QuizPayload["questionnaire"]["questions"],
+  previousAnswers: QuizPayload["answers"],
+  nextAnswers: QuizPayload["answers"],
+) {
+  if (questions.length < 2) {
+    return false;
+  }
+
+  const halfwayCount = Math.ceil(questions.length / 2);
+  const previousAnsweredCount = countAnsweredQuestions(questions, previousAnswers);
+  const nextAnsweredCount = countAnsweredQuestions(questions, nextAnswers);
+
+  return previousAnsweredCount < halfwayCount && nextAnsweredCount >= halfwayCount;
 }
 
 function isSkipOption(option: QuizPayload["questionnaire"]["questions"][number]["options"][number]) {

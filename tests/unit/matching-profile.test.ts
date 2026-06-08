@@ -10,6 +10,7 @@ import {
 } from "../../src/domain/matching/deal-breakers";
 
 const completeInput = {
+  displayName: "User One",
   birthYear: 1994,
   preferredAgeMin: 28,
   preferredAgeMax: 38,
@@ -59,6 +60,7 @@ describe("matching profile", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value).toMatchObject({
+        displayName: "User One",
         birthYear: 1994,
         preferredAgeMin: 28,
         preferredAgeMax: 38,
@@ -122,6 +124,7 @@ describe("matching profile", () => {
 
   it("requires every matching field and at least one deal breaker for completion", () => {
     expect(isMatchingProfileComplete({ ...completeInput, dealBreakerKeys: ["smoking"] })).toBe(true);
+    expect(isMatchingProfileComplete({ ...completeInput, displayName: "", dealBreakerKeys: ["smoking"] })).toBe(false);
     expect(isMatchingProfileComplete({ ...completeInput, locationText: "", dealBreakerKeys: ["smoking"] })).toBe(false);
     expect(isMatchingProfileComplete({ ...completeInput, dealBreakerKeys: [] })).toBe(false);
   });

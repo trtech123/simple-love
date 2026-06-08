@@ -13,5 +13,7 @@ describe("/payment/mock page", () => {
     expect(html).toContain("תשלום מאובטח");
     expect(html).toContain("99 ש״ח");
     expect(html).toContain('href="/payment/return?payment=payment-1&amp;mockPayment=paid"');
+    expect(html).toContain("LovLov cupid");
+    expect(html).toContain("mock-payment-layout");
   });
 });

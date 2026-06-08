@@ -164,7 +164,7 @@ describe("QuizWizard visual taste cards", () => {
     expect(await screen.findByRole("heading", { name: "שאלה 8 מתוך 8" })).toBeTruthy();
   });
 
-  it("lets matching users skip an unanswered question, answer the next one, and return", async () => {
+  it("shows a whole-questionnaire matching skip CTA without per-question skip navigation", async () => {
     fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
       if (url === "/api/matching/sessions/current") {
         return jsonResponse({
@@ -185,16 +185,40 @@ describe("QuizWizard visual taste cards", () => {
     render(<QuizWizard mode="matching" />);
 
     expect(await screen.findByText("Question 1")).toBeTruthy();
-    clickActionButton(1);
+    expect(screen.getByRole("button", { name: "דלג/י לשלב ההתאמות" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "דלג/י בינתיים" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "המשך" })).toBeNull();
+  });
 
-    expect(await screen.findByText("Question 2")).toBeTruthy();
-    fireEvent.click(screen.getByRole("radio", { name: "Answer 2" }));
+  it("skips the whole matching questionnaire and redirects to matches", async () => {
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/matching/sessions/current") {
+        return jsonResponse({
+          publicToken: "matching-token",
+          status: "started",
+          answers: {},
+          questionnaire: matchingQuestionnaire(2),
+        });
+      }
 
-    expect(await screen.findByText("Question 3")).toBeTruthy();
-    clickActionButton(0);
-    expect(await screen.findByText("Question 2")).toBeTruthy();
-    clickActionButton(0);
-    expect(await screen.findByText("Question 1")).toBeTruthy();
+      if (url === "/api/matching/questionnaire/skip" && init?.method === "POST") {
+        return jsonResponse({ completed: true, matchCount: 0 });
+      }
+
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    render(<QuizWizard mode="matching" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "דלג/י לשלב ההתאמות" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/matching/questionnaire/skip",
+        expect.objectContaining({ method: "POST" }),
+      ),
+    );
+    await waitFor(() => expect(window.location.pathname).toBe("/matches"));
   });
 
   it("opens an existing matching session on the first unanswered question", async () => {
@@ -222,7 +246,7 @@ describe("QuizWizard visual taste cards", () => {
         return jsonResponse({
           publicToken: "matching-token",
           status: "started",
-          answers: { "question-2": "option-2" },
+          answers: { "question-1": "option-1", "question-2": "option-2" },
           questionnaire: matchingQuestionnaire(3),
         });
       }
@@ -232,15 +256,10 @@ describe("QuizWizard visual taste cards", () => {
 
     render(<QuizWizard mode="matching" />);
 
-    expect(await screen.findByText("Question 1")).toBeTruthy();
-    clickActionButton(1);
-    expect(await screen.findByText("Question 2")).toBeTruthy();
-    clickActionButton(1);
     expect(await screen.findByText("Question 3")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "לראות את ההתאמות" })).toBeNull();
 
-    clickActionButton(1);
-    expect(await screen.findByText("Question 1")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "דלג/י לשלב ההתאמות" })).toBeTruthy();
   });
 
   it("does not add skip navigation to paid-report quizzes", async () => {
@@ -263,6 +282,7 @@ describe("QuizWizard visual taste cards", () => {
     expect(await screen.findByText("Question 1")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "דלג/י בינתיים" })).toBeNull();
     expect(screen.queryByRole("button", { name: "המשך" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "דלג/י לשלב ההתאמות" })).toBeNull();
   });
 });
 
@@ -293,8 +313,4 @@ function matchingQuestionnaire(count: number) {
       ],
     })),
   };
-}
-
-function clickActionButton(index: number) {
-  fireEvent.click(screen.getAllByRole("button")[index]);
 }

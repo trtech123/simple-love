@@ -22,6 +22,7 @@ export type MatchingSessionRepository = {
   }): Promise<void>;
   markSessionCompleted(sessionId: string): Promise<void>;
   upsertTraitsAndGenerateMatches(userId: string, session: QuizSessionRecord, questionnaire: QuizQuestionnaire): Promise<number>;
+  skipQuestionnaireAndGenerateMatches(userId: string): Promise<number>;
 };
 
 export async function createOrGetMatchingSession(
@@ -119,6 +120,19 @@ export async function completeMatchingSession(
 
   await repository.markSessionCompleted(session.id);
   const matchCount = await repository.upsertTraitsAndGenerateMatches(userId, session, questionnaire);
+
+  return {
+    completed: true,
+    matchCount,
+  };
+}
+
+export async function skipMatchingQuestionnaire(repository: MatchingSessionRepository, userId: string) {
+  if (!(await repository.isMatchingProfileComplete(userId))) {
+    throw new Error("Complete your matching profile before starting the questionnaire");
+  }
+
+  const matchCount = await repository.skipQuestionnaireAndGenerateMatches(userId);
 
   return {
     completed: true,

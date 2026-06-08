@@ -1757,6 +1757,64 @@ p {
   font-variant-numeric: tabular-nums;
 }
 
+.matches-panel--locked {
+  gap: 22px;
+}
+
+.locked-matches-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.locked-matches-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.match-card--locked {
+  min-height: 190px;
+  background:
+    linear-gradient(135deg, rgb(253 232 240 / 58%), rgb(255 255 255 / 92%)),
+    var(--color-surface);
+}
+
+.match-card--locked h2 {
+  color: var(--color-text);
+}
+
+.locked-preview-lines {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+}
+
+.locked-preview-lines span {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  background: rgb(36 23 29 / 10%);
+  color: transparent;
+  filter: blur(4px);
+  line-height: 1.4;
+  user-select: none;
+}
+
+.locked-preview-lines span:last-child {
+  width: 74%;
+}
+
+.locked-unlock-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  padding: 16px;
+}
+
 .match-copy {
   grid-column: 1 / -1;
 }
@@ -2684,6 +2742,11 @@ p {
   }
 
   .match-card {
+    grid-template-columns: 1fr;
+  }
+
+  .locked-matches-header,
+  .locked-matches-grid {
     grid-template-columns: 1fr;
   }
 

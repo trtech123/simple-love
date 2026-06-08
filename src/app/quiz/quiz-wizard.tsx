@@ -64,7 +64,6 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
   const missingCount = Math.max(0, questions.length - answeredCount);
   const allAnswered = payload ? missingCount === 0 : false;
   const selectedOptionId = currentQuestion ? payload?.answers[currentQuestion.id] : undefined;
-  const currentQuestionAnswered = Boolean(selectedOptionId);
   const firstUnansweredIndex = payload ? findFirstUnansweredQuestionIndex(questions, payload.answers) : -1;
   const progressPercent = useMemo(() => {
     if (!questions.length) {
@@ -168,8 +167,27 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
     }
   }
 
-  function moveToNextQuestion() {
-    setCurrentIndex((index) => Math.min(questions.length - 1, index + 1));
+  async function skipMatchingQuestionnaire() {
+    if (mode !== "matching") {
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await readJsonResponse(
+        await fetch("/api/matching/questionnaire/skip", {
+          method: "POST",
+        }),
+      );
+
+      window.history.pushState(null, "", "/matches");
+      window.location.href = "/matches";
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "לא ניתן לדלג על שאלון ההתאמות");
+      setSubmitting(false);
+    }
   }
 
   function moveToFirstUnansweredQuestion() {
@@ -292,6 +310,17 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
             חזרה
           </button>
 
+          {mode === "matching" ? (
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={submitting || savingQuestionId !== null}
+              onClick={() => void skipMatchingQuestionnaire()}
+            >
+              {submitting ? "מדלגים..." : "דלג/י לשלב ההתאמות"}
+            </button>
+          ) : null}
+
           {currentIndex === questions.length - 1 ? (
             mode === "matching" && !allAnswered ? (
               <button
@@ -312,15 +341,6 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
                 {submitting ? config.submittingLabel : config.finalButton}
               </button>
             )
-          ) : mode === "matching" ? (
-            <button
-              className="secondary-button"
-              type="button"
-              disabled={savingQuestionId !== null}
-              onClick={moveToNextQuestion}
-            >
-              {currentQuestionAnswered ? "המשך" : "דלג/י בינתיים"}
-            </button>
           ) : null}
         </div>
 

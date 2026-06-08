@@ -17,6 +17,11 @@ vi.mock("@/domain/payments/return-status", () => ({
   getPaymentReturnStatus: (paymentId: string, options?: unknown) => mocks.getPaymentReturnStatus(paymentId, options),
 }));
 
+vi.mock("next/font/google", () => ({
+  Assistant: () => ({ className: "font-assistant" }),
+  Frank_Ruhl_Libre: () => ({ className: "font-frank-ruhl" }),
+}));
+
 describe("/payment/return page", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -28,10 +33,15 @@ describe("/payment/return page", () => {
     mocks.getPaymentReturnStatus.mockResolvedValue({ state: "payment_pending" });
 
     const html = await renderPaymentReturn({ payment: "payment-1" });
+    expect(html).toContain("payment-return-page");
+    expect(html).toContain("payment-return-shell");
 
     expect(html).toContain("אנחנו מאשרים את התשלום");
     expect(html).toContain("בודקים את סטטוס התשלום");
     expect(html).toContain("/api/payments/status?payment=payment-1");
+    expect(html).toContain("LovLov cupid");
+    expect(html).toContain("payment-state-chips");
+    expect(html).toContain('aria-valuenow="28"');
   });
 
   it("renders failed and cancelled payment retry links for the original quiz session", async () => {
@@ -56,7 +66,20 @@ describe("/payment/return page", () => {
     mocks.getPaymentReturnStatus.mockResolvedValueOnce({ state: "report_ready", claimToken: "claim-token" });
     const readyHtml = await renderPaymentReturn({ payment: "payment-1" });
     expect(readyHtml).toContain("הדוח האישי שלך מוכן");
+    expect(readyHtml).toContain('aria-valuenow="100"');
     expect(readyHtml).toContain('href="/report/claim-token"');
+  });
+
+  it("renders generating and matching unlocked high fidelity states", async () => {
+    mocks.getPaymentReturnStatus.mockResolvedValueOnce({ state: "report_generating" });
+    const generatingHtml = await renderPaymentReturn({ payment: "payment-1" });
+    expect(generatingHtml).toContain("payment-return-title-script");
+    expect(generatingHtml).toContain('aria-valuenow="64"');
+
+    mocks.getPaymentReturnStatus.mockResolvedValueOnce({ state: "matching_unlocked" });
+    const matchingHtml = await renderPaymentReturn({ payment: "payment-1" });
+    expect(matchingHtml).toContain('href="/matches"');
+    expect(matchingHtml).toContain('aria-valuenow="100"');
   });
 
   it("keeps mock paid returns finalizing and linking to the report", async () => {

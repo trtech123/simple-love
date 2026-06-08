@@ -35,6 +35,13 @@ const VISUAL_TASTE_DIMENSIONS = [
 type VisualTasteDimension = (typeof VISUAL_TASTE_DIMENSIONS)[number];
 type CoreMatchingTraitKey = (typeof CORE_TRAIT_KEYS)[number];
 
+const AI_DELTA_CAP_PER_TRAIT = 15;
+const AI_TUNABLE_TRAIT_KEYS = new Set<string>([
+  ...CORE_TRAIT_KEYS,
+  "visual_taste",
+  ...VISUAL_TASTE_DIMENSIONS.map((dimension) => `visual_taste_${dimension}`),
+]);
+
 export function passesHardFilters(
   a: MatchProfile,
   b: MatchProfile,
@@ -133,6 +140,32 @@ export function calculateTraitScore(input: WeightedScoreInput): number {
   }, 0);
 
   return score;
+}
+
+export function effectiveMatchingTraits(
+  baseTraits: Record<string, number> = {},
+  aiSignals: Array<{ traitKey: string; delta: number }> = [],
+) {
+  const deltas = new Map<string, number>();
+
+  for (const signal of aiSignals) {
+    if (!AI_TUNABLE_TRAIT_KEYS.has(signal.traitKey) || !Number.isFinite(signal.delta)) {
+      continue;
+    }
+
+    deltas.set(signal.traitKey, (deltas.get(signal.traitKey) ?? 0) + signal.delta);
+  }
+
+  const traits = { ...baseTraits };
+  for (const [traitKey, delta] of deltas) {
+    if (typeof baseTraits[traitKey] !== "number") {
+      continue;
+    }
+
+    traits[traitKey] = clampScore(baseTraits[traitKey] + Math.max(-AI_DELTA_CAP_PER_TRAIT, Math.min(AI_DELTA_CAP_PER_TRAIT, delta)));
+  }
+
+  return traits;
 }
 
 export function deriveMatchingTraits(input: {

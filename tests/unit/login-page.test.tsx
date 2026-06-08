@@ -37,14 +37,14 @@ describe("/login page", () => {
     expect(html).toContain('value="/chat/conversation-1"');
   });
 
-  it("falls back to matches for unsafe next values and renders OAuth callback errors", async () => {
+  it("falls back to app for unsafe next values and renders OAuth callback errors", async () => {
     const Page = (await import("../../src/app/login/page")).default;
     const element = await Page({
       searchParams: Promise.resolve({ next: "https://evil.example/path", error: "missing_code" }),
     });
     const html = renderToString(element);
 
-    expect(html).toContain('value="/matches"');
+    expect(html).toContain('value="/app"');
     expect(html).toContain("לא הצלחנו להשלים את ההתחברות עם Google");
     expect(html).not.toContain("https://evil.example/path");
   });

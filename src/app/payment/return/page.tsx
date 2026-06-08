@@ -1,11 +1,27 @@
 import Link from "next/link";
+import { Assistant, Frank_Ruhl_Libre } from "next/font/google";
 import { finalizePaymentById } from "@/app/api/payments/finalize";
-import { CheckCircle2, Clock, FileWarning, HeartHandshake, RotateCcw } from "lucide-react";
-import { FunnelCard, FunnelShell, FunnelStateIcon } from "@/components/funnel";
+import { Lovi, type LoviMood } from "@/components/brand/mascot";
 import { getPaymentReturnStatus, type PaymentReturnStatus } from "@/domain/payments/return-status";
 import { PaymentStatusPoller } from "./payment-status-poller";
 
 export const dynamic = "force-dynamic";
+
+const assistant = Assistant({
+  subsets: ["hebrew", "latin"],
+  weight: ["400", "600", "700", "800"],
+});
+
+const frankRuhl = Frank_Ruhl_Libre({
+  subsets: ["hebrew", "latin"],
+  weight: ["500", "700"],
+});
+
+type ReturnContent = {
+  title: string;
+  script?: string;
+  body: string;
+};
 
 export default async function PaymentReturnPage({
   searchParams,
@@ -15,14 +31,7 @@ export default async function PaymentReturnPage({
   const params = await searchParams;
 
   if (!params.payment) {
-    return (
-      <FunnelShell>
-        <FunnelCard>
-          <h1>התשלום לא נמצא</h1>
-          <p>קישור החזרה חסר מזהה תשלום.</p>
-        </FunnelCard>
-      </FunnelShell>
-    );
+    return <PaymentReturnScreen status={{ state: "not_found" }} />;
   }
 
   const isMockPaid = params.mockPayment === "paid" && isMockPaidReturnEnabled();
@@ -32,19 +41,31 @@ export default async function PaymentReturnPage({
         () => ({ state: "payment_pending" }) as PaymentReturnStatus,
       );
 
+  return <PaymentReturnScreen paymentId={params.payment} status={status} />;
+}
+
+function PaymentReturnScreen({ status, paymentId }: { status: PaymentReturnStatus; paymentId?: string }) {
   const content = paymentReturnContent(status);
-  const isWaiting = status.state === "payment_pending" || status.state === "report_generating";
+  const progress = progressForStatus(status);
+  const isWaiting = Boolean(paymentId) && (status.state === "payment_pending" || status.state === "report_generating");
 
   return (
-    <FunnelShell>
-      <FunnelCard className="payment-panel--centered">
-        <FunnelStateIcon icon={iconForStatus(status)} />
-        <h1>{content.title}</h1>
-        <p>{content.body}</p>
-        {renderPaymentAction(status, params.payment)}
-        {isWaiting ? <p className="funnel-mini-note">אפשר להשאיר את העמוד פתוח. הוא יתעדכן לבד.</p> : null}
-      </FunnelCard>
-    </FunnelShell>
+    <main className={`${assistant.className} payment-return-page`} dir="rtl">
+      <section className="payment-return-shell" aria-label="סטטוס יצירת הדוח">
+        <div className="payment-return-mascot">
+          <Lovi size={92} mood={loviMoodForStatus(status)} />
+        </div>
+        <h1>
+          {content.title}
+          {content.script ? <span className={`${frankRuhl.className} payment-return-title-script`}>{content.script}</span> : null}
+        </h1>
+        <p className="payment-return-subcopy">{content.body}</p>
+        <ReturnProgress activeState={status.state} value={progress} />
+        {paymentId ? renderPaymentAction(status, paymentId) : null}
+        <PaymentStateChips activeState={status.state} />
+        {isWaiting ? <p className="payment-return-note">אפשר להשאיר את העמוד פתוח. הוא יתעדכן לבד.</p> : null}
+      </section>
+    </main>
   );
 }
 
@@ -52,20 +73,54 @@ function isMockPaidReturnEnabled() {
   return process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1";
 }
 
-function iconForStatus(status: PaymentReturnStatus) {
-  if (status.state === "report_ready") {
-    return CheckCircle2;
+function loviMoodForStatus(status: PaymentReturnStatus): LoviMood {
+  if (status.state === "report_ready" || status.state === "matching_unlocked") {
+    return "love";
   }
-  if (status.state === "matching_unlocked") {
-    return HeartHandshake;
+  if (status.state === "report_generating") {
+    return "think";
   }
-  if (status.state === "payment_failed" || status.state === "payment_cancelled") {
-    return RotateCcw;
+  if (status.state === "payment_failed" || status.state === "payment_cancelled" || status.state === "report_failed") {
+    return "think";
   }
-  if (status.state === "report_failed" || status.state === "not_found") {
-    return FileWarning;
-  }
-  return Clock;
+  return "smile";
+}
+
+function ReturnProgress({ activeState, value }: { activeState: PaymentReturnStatus["state"]; value: number }) {
+  return (
+    <div className="generation-steps" aria-label="התקדמות הפקת הדוח">
+      <div className="generation-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}>
+        <span style={{ width: `${value}%` }} />
+      </div>
+      <div className="generation-step-row">
+        <span className={value >= 28 ? "is-done" : undefined}>התשלום אושר</span>
+        <span className={value >= 64 ? "is-done" : undefined}>ניתוח תשובות</span>
+        <span className={activeState === "report_generating" || value >= 100 ? "is-done" : undefined}>כתיבת תובנות</span>
+        <span className={value >= 100 ? "is-done" : undefined}>סיום PDF</span>
+      </div>
+    </div>
+  );
+}
+
+function PaymentStateChips({ activeState }: { activeState: PaymentReturnStatus["state"] }) {
+  const states: Array<{ state: PaymentReturnStatus["state"]; label: string }> = [
+    { state: "report_generating", label: "בתהליך" },
+    { state: "report_ready", label: "מוכן" },
+    { state: "payment_pending", label: "בהמתנה" },
+    { state: "payment_cancelled", label: "בוטל" },
+    { state: "payment_failed", label: "נכשל" },
+    { state: "matching_unlocked", label: "התאמות נפתחו" },
+  ];
+
+  return (
+    <div className="payment-state-chips" aria-label="סטטוסים זמינים">
+      {states.map((item) => (
+        <span className={item.state === activeState ? "is-active" : undefined} key={item.state}>
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function statusFromFinalizeResult(result: {
@@ -88,7 +143,7 @@ function statusFromFinalizeResult(result: {
   return { state: "report_generating" };
 }
 
-function paymentReturnContent(status: PaymentReturnStatus) {
+function paymentReturnContent(status: PaymentReturnStatus): ReturnContent {
   switch (status.state) {
     case "not_found":
       return {
@@ -107,8 +162,9 @@ function paymentReturnContent(status: PaymentReturnStatus) {
       };
     case "report_generating":
       return {
-        title: "הדוח בהכנה",
-        body: "התשלום אושר. אנחנו מפיקים את הדוח האישי ונפתח אותו אוטומטית.",
+        title: "אנחנו כותבים לך את",
+        script: "הדוח.",
+        body: "התשלום אושר. LovLov קוראת את התשובות שלך ומרכיבה עבורך דוח אישי - זה בדרך כלל לוקח פחות מדקה.",
       };
     case "report_failed":
       return {
@@ -134,10 +190,23 @@ function paymentReturnContent(status: PaymentReturnStatus) {
   }
 }
 
+function progressForStatus(status: PaymentReturnStatus) {
+  if (status.state === "payment_pending") {
+    return 28;
+  }
+  if (status.state === "report_generating") {
+    return 64;
+  }
+  if (status.state === "report_ready" || status.state === "matching_unlocked") {
+    return 100;
+  }
+  return 18;
+}
+
 function renderPaymentAction(status: PaymentReturnStatus, paymentId: string) {
   if (status.state === "report_ready") {
     return (
-      <Link className="primary-link" href={`/report/${encodeURIComponent(status.claimToken)}`}>
+      <Link className="primary-link payment-return-action" href={`/report/${encodeURIComponent(status.claimToken)}`}>
         פתיחת הדוח
       </Link>
     );
@@ -145,7 +214,7 @@ function renderPaymentAction(status: PaymentReturnStatus, paymentId: string) {
 
   if (status.state === "matching_unlocked") {
     return (
-      <Link className="primary-link" href="/matches">
+      <Link className="primary-link payment-return-action" href="/matches">
         פתיחת ההתאמות
       </Link>
     );
@@ -153,7 +222,7 @@ function renderPaymentAction(status: PaymentReturnStatus, paymentId: string) {
 
   if (status.state === "payment_failed" || status.state === "payment_cancelled") {
     return (
-      <Link className="primary-link" href={status.retryQuizUrl}>
+      <Link className="primary-link payment-return-action" href={status.retryQuizUrl}>
         חזרה לשאלון השמור
       </Link>
     );

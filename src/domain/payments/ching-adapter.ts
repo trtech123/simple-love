@@ -29,8 +29,9 @@ export interface ChingAdapter {
 
 export class MockChingAdapter implements ChingAdapter {
   async createPayment(input: CreatePaymentInput): Promise<CreatedPayment> {
-    const redirectUrl = new URL("/payment/mock", input.successUrl);
+    const redirectUrl = new URL(input.successUrl);
     redirectUrl.searchParams.set("payment", input.paymentId);
+    redirectUrl.searchParams.set("mockPayment", "paid");
 
     return {
       providerReference: `mock-${input.paymentId}`,

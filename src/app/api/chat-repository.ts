@@ -213,12 +213,28 @@ export function createSupabaseChatRepository(supabase: SupabaseClient): ChatRepo
   };
 }
 
-export function createChatRepository(supabase: SupabaseClient): ChatRepository {
-  return isE2eTestMode() ? createE2eChatRepository() : createSupabaseChatRepository(supabase);
+export function createChatRepository(supabase?: SupabaseClient): ChatRepository {
+  if (isE2eTestMode()) {
+    return createE2eChatRepository();
+  }
+
+  if (!supabase) {
+    throw new Error("Missing Supabase client for chat repository");
+  }
+
+  return createSupabaseChatRepository(supabase);
 }
 
-export async function loadChatMessages(supabase: SupabaseClient, conversationId: string) {
-  return isE2eTestMode() ? listE2eMessages(conversationId) : loadConversationMessages(supabase, conversationId);
+export async function loadChatMessages(supabase: SupabaseClient | undefined, conversationId: string) {
+  if (isE2eTestMode()) {
+    return listE2eMessages(conversationId);
+  }
+
+  if (!supabase) {
+    throw new Error("Missing Supabase client for chat messages");
+  }
+
+  return loadConversationMessages(supabase, conversationId);
 }
 
 export async function loadConversationMessages(supabase: SupabaseClient, conversationId: string) {

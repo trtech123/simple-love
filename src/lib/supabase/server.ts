@@ -20,7 +20,12 @@ export async function createClient() {
           }[],
         ) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
+            try {
+              cookieStore.set(name, value, options);
+            } catch {
+              // Server Components can read cookies but cannot write refreshed auth cookies.
+              // Route handlers and server actions still write successfully through this adapter.
+            }
           });
         },
       },

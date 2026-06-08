@@ -22,7 +22,7 @@ export function RegisterClaimForm({
 
     const redirectTo = new URL("/auth/callback", window.location.origin);
     redirectTo.searchParams.set("claim", claimToken);
-    redirectTo.searchParams.set("next", "/profile/matching");
+    redirectTo.searchParams.set("next", "/app");
 
     const supabase = createClient();
     const { error: signInError } = await supabase.auth.signInWithOAuth({
@@ -75,7 +75,7 @@ export function RegisterClaimForm({
       return;
     }
 
-    router.push("/profile/matching");
+    router.push("/app");
   }
 
   return (

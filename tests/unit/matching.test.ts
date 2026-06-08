@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateMatchScore,
+  effectiveMatchingTraits,
   deriveMatchingTraits,
   generateMatchesForProfile,
   passesHardFilters,
@@ -477,6 +478,23 @@ describe("matching", () => {
     });
 
     expect(withZeroVisual).toBe(withoutVisual);
+  });
+
+  it("uses capped AI soft-signal deltas without mutating hard filters", () => {
+    expect(
+      effectiveMatchingTraits(
+        { emotional_profile: 90, communication_style: 5 },
+        [
+          { traitKey: "emotional_profile", delta: 40 },
+          { traitKey: "emotional_profile", delta: -5 },
+          { traitKey: "communication_style", delta: -50 },
+          { traitKey: "unknown_trait", delta: 100 },
+        ],
+      ),
+    ).toEqual({
+      emotional_profile: 100,
+      communication_style: 0,
+    });
   });
 
   it("limits deal-breaker hard-filter overlap to configured keys", () => {

@@ -79,6 +79,7 @@ export async function GET() {
 
   return apiSuccess({
     complete: isMatchingProfileComplete({
+      displayName: profile?.display_name,
       birthYear: profile?.birth_year,
       preferredAgeMin: profile?.preferred_age_min,
       preferredAgeMax: profile?.preferred_age_max,
@@ -167,6 +168,7 @@ export async function PUT(request: Request) {
 
   const { error: saveError } = await supabase.rpc("save_matching_profile", {
     p_user_id: userId,
+    p_display_name: value.displayName,
     p_birth_year: value.birthYear,
     p_preferred_age_min: value.preferredAgeMin,
     p_preferred_age_max: value.preferredAgeMax,
@@ -280,6 +282,7 @@ function isSchemaUnavailableError(error: unknown) {
 
 function toValidationCode(error: string) {
   const codes: Record<string, string> = {
+    "displayName is required": "display_name_required",
     "gender is required": "gender_required",
     "interestedIn is required": "interested_in_required",
     "locationText is required": "location_text_required",

@@ -97,6 +97,7 @@ function putRequest(body: unknown) {
 }
 
 const validProfileInput = {
+  displayName: "Updated User",
   birthYear: 1992,
   preferredAgeMin: 30,
   preferredAgeMax: 42,
@@ -189,6 +190,7 @@ describe("/api/profile/matching", () => {
         fn: "save_matching_profile",
         args: expect.objectContaining({
           p_user_id: "user-1",
+          p_display_name: "Updated User",
           p_birth_year: 1992,
           p_preferred_age_min: 30,
           p_preferred_age_max: 42,
@@ -237,6 +239,7 @@ describe("/api/profile/matching", () => {
 
     const response = await PUT(
       putRequest({
+        displayName: "User One",
         birthYear: 1994,
         preferredAgeMin: 28,
         preferredAgeMax: 38,

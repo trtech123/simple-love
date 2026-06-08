@@ -18,7 +18,7 @@ export async function GET(
     return NextResponse.json({ error: "Report was not found" }, { status: 404 });
   }
 
-  const pdf = createReportPdfBytes({
+  const pdf = await createReportPdfBytes({
     reportNumber: report.reportNumber,
     ...report.output,
   });
@@ -28,7 +28,7 @@ export async function GET(
     pdf,
   });
 
-  return new NextResponse(pdf, {
+  return new NextResponse(toArrayBuffer(pdf), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${report.reportNumber}.pdf"`,
@@ -64,4 +64,10 @@ async function persistReportPdfArtifact(input: {
     },
     { onConflict: "report_id,artifact_type" },
   );
+}
+
+function toArrayBuffer(bytes: Uint8Array) {
+  const body = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(body).set(bytes);
+  return body;
 }

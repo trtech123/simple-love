@@ -1,5 +1,5 @@
 import { DEFAULT_PREFERRED_DISTANCE_KM } from "./profile";
-import { generateMatchesForProfile } from "./scoring";
+import { effectiveMatchingTraits, generateMatchesForProfile } from "./scoring";
 import type { PublishedMatchSettings } from "./settings";
 import type { MatchProfile } from "./types";
 
@@ -86,8 +86,9 @@ export async function loadMatchProfiles(supabase: SupabaseLike): Promise<MatchPr
 
   const profiles = ((profilesResult.data ?? []) as ProfileRow[]).filter((profile) => !profile.disabled_at);
   const userIds = profiles.map((profile) => profile.user_id);
-  const [traitsByUser, blockedByUser, dealBreakerKeysByUser] = await Promise.all([
+  const [traitsByUser, aiSignalsByUser, blockedByUser, dealBreakerKeysByUser] = await Promise.all([
     loadTraitsByUser(supabase, userIds),
+    loadAiSignalsByUser(supabase, userIds),
     loadBlockedUsersByUser(supabase, userIds),
     loadDealBreakerKeysByUser(supabase, userIds),
   ]);
@@ -107,7 +108,10 @@ export async function loadMatchProfiles(supabase: SupabaseLike): Promise<MatchPr
     dealBreakerKeys: dealBreakerKeysByUser.get(profile.user_id) ?? [],
     blockedUserIds: blockedByUser.get(profile.user_id) ?? [],
     disabled: Boolean(profile.disabled_at),
-    traits: traitsByUser.get(profile.user_id) ?? {},
+    traits: effectiveMatchingTraits(
+      traitsByUser.get(profile.user_id) ?? {},
+      aiSignalsByUser.get(profile.user_id) ?? [],
+    ),
   }));
 }
 
@@ -173,6 +177,29 @@ async function loadTraitsByUser(supabase: SupabaseLike, userIds: string[]) {
   }
 
   return traitsByUser;
+}
+
+async function loadAiSignalsByUser(supabase: SupabaseLike, userIds: string[]) {
+  const signalsByUser = new Map<string, Array<{ traitKey: string; delta: number }>>();
+  if (!userIds.length) return signalsByUser;
+
+  const { data, error } = await query(
+    chain(supabase.from("ai_coach_soft_signals"))
+      .select("user_id, trait_key, delta")
+      .in("user_id", userIds)
+      .eq("status", "active"),
+  );
+  if (error) throw new Error(error.message ?? "Could not load AI coach signals");
+
+  for (const signal of (data ?? []) as { user_id: string; trait_key: string; delta: number | null }[]) {
+    if (signal.delta === null) continue;
+    signalsByUser.set(signal.user_id, [
+      ...(signalsByUser.get(signal.user_id) ?? []),
+      { traitKey: signal.trait_key, delta: Number(signal.delta) },
+    ]);
+  }
+
+  return signalsByUser;
 }
 
 async function loadBlockedUsersByUser(supabase: SupabaseLike, userIds: string[]) {

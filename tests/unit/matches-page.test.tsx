@@ -1,4 +1,6 @@
 import React from "react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { renderToString } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -69,5 +71,11 @@ describe("MatchesPage", () => {
     expect(html).not.toContain("Sensitive Match Name");
     expect(html).not.toContain("Sensitive explanation");
     expect(html).not.toContain("Jerusalem");
+  });
+
+  it("keeps the locked matches paywall wide enough for the preview grid", () => {
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+
+    expect(css).toMatch(/\.matches-panel--locked\s*\{[^}]*width:\s*min\(100%,\s*980px\)/s);
   });
 });

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { generatePaidReport } from "../../src/domain/reports/generation";
-import { createReportPdfBytes, createReportPdfStoragePath } from "../../src/domain/reports/pdf";
+import {
+  createReportPdfBytes,
+  createReportPdfLayout,
+  createReportPdfStoragePath,
+} from "../../src/domain/reports/pdf";
 import { assembleReportPrompt } from "../../src/domain/reports/prompt";
 import { validateReportOutput } from "../../src/domain/reports/report-output";
 
@@ -101,18 +105,46 @@ describe("report generation", () => {
     expect(writes).toEqual(["generating", expect.stringMatching(/^failed:/)]);
   });
 
-  it("creates deterministic PDF bytes and storage path for a completed report", () => {
-    const pdf = createReportPdfBytes({
+  it("creates deterministic PDF bytes and storage path for a completed report", async () => {
+    const pdf = await createReportPdfBytes({
       ...createRichReportOutput(),
       reportNumber: "LL-2026-ABCDEF12",
     });
 
     expect(Buffer.from(pdf.subarray(0, 5)).toString("ascii")).toBe("%PDF-");
-    expect(Buffer.from(pdf).toString("latin1")).toContain("LL-2026-ABCDEF12");
-    expect(Buffer.from(pdf).length).toBeGreaterThan(5000);
+    expect(Buffer.from(pdf).length).toBeGreaterThan(200000);
     expect(createReportPdfStoragePath("report-1", "LL-2026-ABCDEF12")).toBe(
       "reports/report-1/LL-2026-ABCDEF12.pdf",
     );
+  });
+
+  it("keeps measured PDF text and CTA media inside page margins", () => {
+    const layout = createReportPdfLayout({
+      ...createRichReportOutput(),
+      openingSummary:
+        "זהו משפט עברי ארוך במיוחד שנועד לבדוק שבירת שורות לפי רוחב אמיתי ולא לפי ספירת תווים בלבד. ".repeat(10),
+      reportNumber: "LL-2026-ABCDEF12",
+    });
+    const pageRight = layout.page.width - layout.marginX;
+
+    for (const page of layout.pages) {
+      for (const block of page.blocks) {
+        expect(block.y).toBeGreaterThanOrEqual(layout.bottomY);
+        expect(block.y + block.height).toBeLessThanOrEqual(layout.topY);
+      }
+
+      for (const text of page.text) {
+        expect(text.x).toBeGreaterThanOrEqual(layout.marginX);
+        expect(text.x + text.width).toBeLessThanOrEqual(pageRight + 0.01);
+        expect(text.y).toBeGreaterThanOrEqual(layout.bottomY);
+        expect(text.y).toBeLessThanOrEqual(layout.topY);
+        expect(text.x).toBeLessThan(pageRight);
+      }
+    }
+
+    expect(layout.ctaImage.width).toBeLessThanOrEqual(150);
+    expect(layout.ctaImage.height).toBeLessThanOrEqual(100);
+    expect(layout.pages.at(-1)?.blocks.some((block) => block.kind === "cta")).toBe(true);
   });
 });
 

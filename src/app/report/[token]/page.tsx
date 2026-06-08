@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Download, HeartHandshake, Mail, MessageCircle, UserPlus } from "lucide-react";
+import { Lovi } from "@/components/brand/mascot";
 import { Wordmark } from "@/components/brand/wordmark";
 import { FunnelButton } from "@/components/funnel";
 import { getReportByClaimToken } from "@/domain/reports/claim-lookup";
@@ -45,6 +45,9 @@ export default async function ReportPage({
           <div className="report-cover-brand">
             <Wordmark />
           </div>
+          <div className="report-lovi">
+            <Lovi size={74} mood="love" />
+          </div>
           <p className="funnel-eyebrow">הדוח האישי שלך מוכן</p>
           <p className="report-number" dir="ltr">
             {report.reportNumber}
@@ -82,14 +85,9 @@ export default async function ReportPage({
             ) : null}
           </div>
           <aside className="report-next-panel" aria-labelledby="report-next-title">
-            <Image
-              src="/landing-couple.png"
-              alt="זוג יושב יחד באווירה רגועה"
-              width={1536}
-              height={1024}
-              sizes="(max-width: 760px) 100vw, 320px"
-              className="report-next-image"
-            />
+            <div className="report-save-mascot">
+              <Lovi size={86} mood="happy" />
+            </div>
             <div className="report-next-copy">
               <p className="funnel-eyebrow">השלב הבא</p>
               <h2 id="report-next-title">להפוך את התובנה להתאמות</h2>

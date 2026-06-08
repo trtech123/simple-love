@@ -362,6 +362,49 @@ describe("createSupabaseMatchingSessionRepository", () => {
     );
   });
 
+  it("falls back to default match settings when skipped questionnaire generation finds an invalid published settings version", async () => {
+    const db = createDb({
+      profiles: [currentProfile()],
+      match_settings: [{ id: "settings-1", slug: "default-v1" }],
+      match_settings_versions: [
+        {
+          id: "settings-version-invalid",
+          match_settings_id: "settings-1",
+          version: 2,
+          status: "published",
+          weights: {
+            emotional_profile: 0,
+            communication_style: 0,
+            commitment_readiness: 0,
+            relationship_vision: 0,
+            visual_taste: 0,
+          },
+          hard_filters: [],
+          deal_breaker_filters: [],
+          published_at: "2026-06-05T10:00:00.000Z",
+        },
+      ],
+    });
+
+    const result = await repositoryFor(db).skipQuestionnaireAndGenerateMatches("user-b");
+
+    expect(result).toBe(0);
+    expect(db.profiles.find((row) => row.user_id === "user-b")).toEqual(
+      expect.objectContaining({
+        completed_depth_questionnaire_at: expect.any(String),
+        updated_at: expect.any(String),
+      }),
+    );
+    expect(db.match_settings_versions).toContainEqual(
+      expect.objectContaining({
+        match_settings_id: "settings-1",
+        version: 1,
+        status: "published",
+        weights: expect.objectContaining({ emotional_profile: 30 }),
+      }),
+    );
+  });
+
   it("persists visual taste traits and includes visual taste in match explanations", async () => {
     const visualQuestions = visualDimensions.map((dimension, index) => ({
       id: `visual-question-${dimension}`,

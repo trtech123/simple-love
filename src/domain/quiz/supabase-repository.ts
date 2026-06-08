@@ -784,7 +784,7 @@ async function getLatestPublishedMatchSettingsVersion(supabase: SupabaseClient):
   if (published) {
     const parsed = parsePublishedMatchSettings(published);
     if (!parsed.ok) {
-      throw new Error(parsed.errors.map((error) => error.message).join(" "));
+      return ensureDefaultMatchSettingsVersion(supabase);
     }
     return parsed.value;
   }

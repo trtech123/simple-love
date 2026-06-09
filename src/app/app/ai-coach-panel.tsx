@@ -2,6 +2,13 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 
+const QUICK_PROMPTS = [
+  { label: "מה הדפוס שלי?", value: "מה הדפוס הכי בולט שלי בקשרים לפי מה שסיפרתי לך?" },
+  { label: "איך לשפר פרופיל?", value: "איך כדאי לדייק את הפרופיל שלי כדי למשוך קשר מתאים יותר?" },
+  { label: "למה אני נתקע/ת?", value: "איפה יכול להיות שאני נתקע/ת בדייטים או בתחילת קשר?" },
+  { label: "איזה קשר מתאים לי?", value: "איזה סוג קשר ואדם יכולים להתאים לי עכשיו?" },
+];
+
 type CoachMessage = {
   id?: string;
   role: "user" | "assistant";
@@ -93,20 +100,39 @@ export function AiCoachPanel() {
         )}
       </div>
 
+      <div className="ai-coach-quick-prompts" aria-label="Quick prompts">
+        {QUICK_PROMPTS.map((prompt, index) => (
+          <button
+            aria-label={index === 0 ? "Start conversation prompt" : undefined}
+            className="ai-coach-chip"
+            key={prompt.label}
+            type="button"
+            onClick={() => setMessage(prompt.value)}
+          >
+            {prompt.label}
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={(event) => void handleSubmit(event)}>
-        <label>
+        <label className="sr-only" htmlFor="ai-coach-message">
           הודעה למאמנת
+        </label>
+        <div className="ai-coach-input-row">
           <textarea
+            aria-label="Message to AI coach"
+            id="ai-coach-message"
             name="message"
             value={message}
             onChange={(event) => setMessage(event.currentTarget.value)}
-            placeholder="מה למדת על עצמך בדייטים האחרונים?"
+            placeholder="כתבי הודעה למאמנת..."
+            rows={1}
           />
-        </label>
+          <button className="primary-button" type="submit" disabled={submitting || !message.trim()} aria-label="Send message">
+            {submitting ? "שולחים..." : "שליחה"}
+          </button>
+        </div>
         {error ? <p className="form-error">{error}</p> : null}
-        <button className="primary-button" type="submit" disabled={submitting || !message.trim()}>
-          {submitting ? "שולחים..." : "שליחה"}
-        </button>
       </form>
     </div>
   );

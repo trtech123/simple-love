@@ -53,17 +53,21 @@ describe("/app page", () => {
 
     expect(html).toContain("profile-onboarding");
     expect(html).not.toContain("app-tab-nav");
+    expect(html).not.toContain("app-bottom-nav");
   });
 
-  it("renders three tabs after profile completion without requiring the depth quiz", async () => {
+  it("renders the mobile app shell after profile completion without requiring the depth quiz", async () => {
     const AppPage = (await import("../../src/app/app/page")).default;
 
     const html = renderToString(await AppPage());
 
-    expect(html).toContain("app-tab-nav");
-    expect(html).toContain("הפרופיל שלי");
-    expect(html).toContain("מאמנת AI");
-    expect(html).toContain("התאמות");
-    expect(html).toContain("שאלון העומק");
+    expect(html).toContain("app-home-shell");
+    expect(html).toContain("app-bottom-nav");
+    expect(html).not.toContain("app-tab-nav");
+    expect(html).toContain("Current User");
+    expect(html).toContain("Tel Aviv");
+    expect(html).toContain("serious");
+    expect(html).toContain("AI");
+    expect(html).toContain("aria-label=\"Matches\"");
   });
 });

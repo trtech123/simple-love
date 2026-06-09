@@ -339,7 +339,7 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
             <p className="quiz-reference-helper">ענה לפי מה שאתה באמת מרגיש, לא לפי מה שאתה חושב שצריך להרגיש.</p>
 
             <div className="quiz-reference-answers" role="radiogroup" aria-label={currentQuestion.prompt}>
-              {currentQuestion.options.map((option) => {
+              {currentQuestion.options.map((option, optionIndex) => {
                 const selected = selectedOptionId === option.id;
 
                 return (
@@ -354,7 +354,9 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
                     key={option.id}
                     onClick={() => void selectAnswer(currentQuestion.id, option.id)}
                   >
-                    <span className="quiz-reference-radio" aria-hidden="true" />
+                    <span className="quiz-reference-radio" aria-hidden="true">
+                      {selected ? "✓" : optionIndex + 1}
+                    </span>
                     <span>{option.label}</span>
                   </button>
                 );

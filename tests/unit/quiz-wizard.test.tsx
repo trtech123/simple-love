@@ -146,6 +146,9 @@ describe("QuizWizard visual taste cards", () => {
     expect(screen.queryByRole("button", { name: "לתשלום ופתיחת הדוח" })).toBeNull();
     expect(container.querySelector(".quiz-reference-page")).toBeTruthy();
     expect(container.querySelector(".quiz-reference-answers")).toBeTruthy();
+    expect(
+      Array.from(container.querySelectorAll(".quiz-reference-radio")).map((radio) => radio.textContent),
+    ).toEqual(["1"]);
     expect(container.querySelectorAll(".quiz-reference-actions button")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "→ חזרה" }).hasAttribute("disabled")).toBe(true);
   });

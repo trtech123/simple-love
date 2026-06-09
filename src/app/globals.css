@@ -3631,10 +3631,10 @@ p {
 
 .quiz-reference-answers {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 116px));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 136px), 158px));
+  gap: 14px;
   justify-content: center;
-  width: 100%;
+  width: min(100%, 820px);
   margin-top: 36px;
 }
 
@@ -3644,18 +3644,18 @@ p {
   align-items: center;
   justify-content: center;
   gap: 14px;
-  min-height: 92px;
+  min-height: 104px;
   min-width: 0;
   border: 1.5px solid var(--color-border);
   border-radius: 15px;
   background: rgb(255 255 255 / 62%);
   color: #7b555f;
-  padding: 12px 10px;
+  padding: 14px 12px;
   box-shadow: 0 7px 16px rgb(90 33 48 / 3%);
   font: inherit;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 900;
-  line-height: 1.2;
+  line-height: 1.28;
   text-align: center;
   cursor: pointer;
 }
@@ -3679,26 +3679,24 @@ p {
 .quiz-reference-radio {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   flex: 0 0 auto;
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-pill);
   background: rgb(255 255 255 / 78%);
+  color: #a27d87;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .quiz-reference-option--selected .quiz-reference-radio {
-  border-color: #f47a91;
-  background: transparent;
-}
-
-.quiz-reference-option--selected .quiz-reference-radio::after {
-  content: "";
-  display: block;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-pill);
+  border-color: var(--color-primary);
   background: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 6px 12px rgb(224 50 80 / 22%);
 }
 
 .quiz-reference-error {
@@ -4090,7 +4088,9 @@ p {
     min-height: 70px;
     flex-direction: row;
     justify-content: flex-start;
-    padding: 0 24px;
+    gap: 12px;
+    padding: 12px 18px;
+    font-size: 15px;
     text-align: right;
   }
 

@@ -2693,6 +2693,7 @@ p {
   font: inherit;
   font-size: 12px;
   font-weight: 900;
+  text-decoration: none;
 }
 
 .app-nav-button--active {
@@ -2710,6 +2711,21 @@ p {
   border-color: #ffd6dd;
   border-radius: 24px;
   background: #fffefe;
+  padding: 16px;
+}
+
+.app-surface-panel,
+.funnel-shell--app .matches-panel {
+  min-width: 0;
+  border: 1px solid #ffd6dd;
+  border-radius: 24px;
+  background: #fffefe;
+  padding: 16px;
+  box-shadow: 0 18px 55px rgb(239 63 98 / 10%);
+}
+
+.funnel-shell--app .matches-panel {
+  width: 100%;
 }
 
 .app-match-state h2 {

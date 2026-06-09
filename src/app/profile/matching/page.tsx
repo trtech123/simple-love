@@ -1,4 +1,5 @@
 import { requireAuthenticatedUserId } from "@/app/api/matching/auth";
+import { AppFrame } from "@/components/app/app-frame";
 import { FunnelButton, FunnelCard, FunnelShell, IconList } from "@/components/funnel";
 import { HeartHandshake, MapPin, ShieldCheck } from "lucide-react";
 import { MatchingProfileForm } from "./matching-profile-form";
@@ -23,20 +24,22 @@ export default async function MatchingProfilePage() {
   }
 
   return (
-    <FunnelShell className="funnel-shell--wide">
-      <FunnelCard className="register-panel">
-        <p className="funnel-eyebrow">שלב התאמות</p>
-        <h1>פרופיל התאמה</h1>
-        <p>הפרטים האלה משמשים לסינון התאמות בסיסי לפני שאלון העומק.</p>
-        <IconList
-          items={[
-            { icon: MapPin, title: "מיקום וטווח גילאים" },
-            { icon: ShieldCheck, title: "גבולות שלא מתפשרים עליהם" },
-            { icon: HeartHandshake, title: "כוונת קשר והעדפות בסיסיות" },
-          ]}
-        />
-        <MatchingProfileForm />
-      </FunnelCard>
+    <FunnelShell className="funnel-shell--app" showBrand={false}>
+      <AppFrame active="profile">
+        <section className="register-panel app-view app-surface-panel">
+          <p className="funnel-eyebrow">שלב התאמות</p>
+          <h1>פרופיל התאמה</h1>
+          <p>הפרטים האלה משמשים לסינון התאמות בסיסי לפני שאלון העומק.</p>
+          <IconList
+            items={[
+              { icon: MapPin, title: "מיקום וטווח גילאים" },
+              { icon: ShieldCheck, title: "גבולות שלא מתפשרים עליהם" },
+              { icon: HeartHandshake, title: "כוונת קשר והעדפות בסיסיות" },
+            ]}
+          />
+          <MatchingProfileForm />
+        </section>
+      </AppFrame>
     </FunnelShell>
   );
 }

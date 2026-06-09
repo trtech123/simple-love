@@ -1,5 +1,6 @@
 import { createChatRepository, loadChatMessages } from "@/app/api/chat-repository";
 import { requireAuthenticatedUserId } from "@/app/api/matching/auth";
+import { AppFrame } from "@/components/app/app-frame";
 import { isE2eTestMode } from "@/lib/e2e-mode";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import Link from "next/link";
@@ -67,27 +68,29 @@ export default async function ChatPage({ params }: ChatPageProps) {
   const otherDisplayName = otherProfile?.displayName ?? "התאמה";
 
   return (
-    <main className="page-shell chat-page">
-      <div className="chat-shell">
-        <header className="chat-header">
-          <div>
-            <p className="eyebrow">שיחה</p>
-            <h1>{otherDisplayName}</h1>
-          </div>
-          <Link className="secondary-link" href="/matches">
-            חזרה להתאמות
-          </Link>
-        </header>
-        <ChatThread
-          conversationId={conversationId}
-          currentUserId={userId}
-          otherDisplayName={otherDisplayName}
-          initialMessages={messages}
-          canSend={!disabledReason}
-          disabledReason={disabledReason}
-          isBlocked={blockedPairs.length > 0}
-        />
-      </div>
+    <main className="funnel-shell funnel-shell--app chat-page" dir="rtl">
+      <AppFrame active="chat" avatarLabel={currentProfile?.displayName}>
+        <div className="chat-shell">
+          <header className="chat-header">
+            <div>
+              <p className="eyebrow">שיחה</p>
+              <h1>{otherDisplayName}</h1>
+            </div>
+            <Link className="secondary-link" href="/matches">
+              חזרה להתאמות
+            </Link>
+          </header>
+          <ChatThread
+            conversationId={conversationId}
+            currentUserId={userId}
+            otherDisplayName={otherDisplayName}
+            initialMessages={messages}
+            canSend={!disabledReason}
+            disabledReason={disabledReason}
+            isBlocked={blockedPairs.length > 0}
+          />
+        </div>
+      </AppFrame>
     </main>
   );
 }

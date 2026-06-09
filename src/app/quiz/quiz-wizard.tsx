@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { AppFrame } from "@/components/app/app-frame";
 import { Lovi } from "@/components/brand/mascot";
 import { Wordmark } from "@/components/brand/wordmark";
 import { FunnelCard, FunnelShell, ProgressHeader } from "@/components/funnel";
@@ -48,7 +49,7 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
           submittingLabel: "מסיימים...",
           progressLabel: "דוח אישי",
         };
-  const shellClassName = mode === "matching" ? "funnel-shell--wide quiz-shell quiz-shell--matching" : undefined;
+  const shellClassName = mode === "matching" ? "funnel-shell--app quiz-shell quiz-shell--matching" : undefined;
   const panelClassName = mode === "matching" ? "quiz-panel quiz-panel--matching" : "quiz-panel";
 
   useEffect(() => {
@@ -263,6 +264,20 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
   }
 
   if (loading) {
+    if (mode === "matching") {
+      return (
+        <FunnelShell showBrand={false} className={shellClassName}>
+          <AppFrame active="questionnaire">
+            <div className="quiz-panel--loading app-surface-panel" aria-live="polite">
+              <div className="skeleton skeleton-title" />
+              <div className="skeleton skeleton-line" />
+              <div className="skeleton skeleton-line skeleton-line--short" />
+            </div>
+          </AppFrame>
+        </FunnelShell>
+      );
+    }
+
     return (
       <FunnelShell className={shellClassName}>
         <FunnelCard className="quiz-panel--loading" aria-live="polite">
@@ -275,6 +290,23 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
   }
 
   if (!payload || !currentQuestion) {
+    if (mode === "matching") {
+      return (
+        <FunnelShell showBrand={false} className={shellClassName}>
+          <AppFrame active="questionnaire">
+            <section className="app-view app-surface-panel">
+              <p className="funnel-eyebrow">LovLov</p>
+              <h1>השאלון לא נטען</h1>
+              {error ? <p className="form-error">{error}</p> : null}
+              <button className="primary-button" type="button" onClick={() => void loadOrCreateSession()}>
+                נסו שוב
+              </button>
+            </section>
+          </AppFrame>
+        </FunnelShell>
+      );
+    }
+
     return (
       <FunnelShell className={shellClassName}>
         <FunnelCard>
@@ -386,8 +418,39 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
 
   return (
     <FunnelShell showBrand={false} className={shellClassName}>
-      <ProgressHeader current={currentIndex + 1} total={questions.length} label={config.progressLabel} />
-      <FunnelCard className={panelClassName} aria-labelledby="quiz-title">
+      {mode === "matching" ? (
+        <AppFrame active="questionnaire">
+          <ProgressHeader current={currentIndex + 1} total={questions.length} label={config.progressLabel} />
+          <section className={`${panelClassName} app-surface-panel`} aria-labelledby="quiz-title">
+            <MatchingQuizContent
+              allAnswered={allAnswered}
+              answeredCount={answeredCount}
+              config={config}
+              currentIndex={currentIndex}
+              currentQuestion={currentQuestion}
+              error={error}
+              firstUnansweredIndex={firstUnansweredIndex}
+              missingCount={missingCount}
+              moveToFirstUnansweredQuestion={moveToFirstUnansweredQuestion}
+              onBack={() => {
+                setShowProgressCheckpoint(false);
+                setCurrentIndex((index) => Math.max(0, index - 1));
+              }}
+              progressPercent={progressPercent}
+              savingQuestionId={savingQuestionId}
+              selectedOptionId={selectedOptionId}
+              selectAnswer={selectAnswer}
+              skipMatchingQuestionnaire={skipMatchingQuestionnaire}
+              submitQuiz={submitQuiz}
+              submitting={submitting}
+              questionsLength={questions.length}
+            />
+          </section>
+        </AppFrame>
+      ) : (
+        <>
+          <ProgressHeader current={currentIndex + 1} total={questions.length} label={config.progressLabel} />
+          <FunnelCard className={panelClassName} aria-labelledby="quiz-title">
         <p className="funnel-eyebrow">{config.title}</p>
         <h1 id="quiz-title">
           שאלה {currentIndex + 1} מתוך {questions.length}
@@ -484,8 +547,139 @@ export function QuizWizard({ mode = "paid_report" }: QuizWizardProps) {
             ? `${answeredCount} תשובות נשמרו, ${missingCount} שאלות נשארו`
             : `${answeredCount} תשובות נשמרו`}
         </p>
-      </FunnelCard>
+          </FunnelCard>
+        </>
+      )}
     </FunnelShell>
+  );
+}
+
+function MatchingQuizContent({
+  allAnswered,
+  answeredCount,
+  config,
+  currentIndex,
+  currentQuestion,
+  error,
+  firstUnansweredIndex,
+  missingCount,
+  moveToFirstUnansweredQuestion,
+  onBack,
+  progressPercent,
+  savingQuestionId,
+  selectedOptionId,
+  selectAnswer,
+  skipMatchingQuestionnaire,
+  submitQuiz,
+  submitting,
+  questionsLength,
+}: {
+  allAnswered: boolean;
+  answeredCount: number;
+  config: {
+    title: string;
+    finalButton: string;
+    submittingLabel: string;
+  };
+  currentIndex: number;
+  currentQuestion: QuizPayload["questionnaire"]["questions"][number];
+  error: string | null;
+  firstUnansweredIndex: number;
+  missingCount: number;
+  moveToFirstUnansweredQuestion: () => void;
+  onBack: () => void;
+  progressPercent: number;
+  savingQuestionId: string | null;
+  selectedOptionId?: string;
+  selectAnswer: (questionId: string, questionOptionId: string) => Promise<void>;
+  skipMatchingQuestionnaire: () => Promise<void>;
+  submitQuiz: () => Promise<void>;
+  submitting: boolean;
+  questionsLength: number;
+}) {
+  return (
+    <>
+      <p className="funnel-eyebrow">{config.title}</p>
+      <h1 id="quiz-title">
+        שאלה {currentIndex + 1} מתוך {questionsLength}
+      </h1>
+      <p className="quiz-question">{currentQuestion.prompt}</p>
+
+      <div
+        className={isVisualTasteQuestion(currentQuestion) ? "visual-answer-grid" : "answer-grid"}
+        role="radiogroup"
+        aria-label={currentQuestion.prompt}
+      >
+        {currentQuestion.options.map((option) => {
+          const selected = selectedOptionId === option.id;
+          const image = getOptionImage(option.score);
+          const isSkip = isSkipOption(option);
+
+          return (
+            <button
+              className={answerOptionClassName({ selected, visual: isVisualTasteQuestion(currentQuestion), skip: isSkip })}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              disabled={savingQuestionId === currentQuestion.id}
+              key={option.id}
+              onClick={() => void selectAnswer(currentQuestion.id, option.id)}
+            >
+              {image ? (
+                <Image className="visual-answer-image" src={image.src} alt={image.alt} width={640} height={400} unoptimized />
+              ) : null}
+              <span className={image ? "visual-answer-label" : undefined}>{option.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {error ? <p className="form-error">{error}</p> : null}
+
+      <div className="quiz-actions">
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={currentIndex === 0 || savingQuestionId !== null}
+          onClick={onBack}
+        >
+          חזרה
+        </button>
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={submitting || savingQuestionId !== null}
+          onClick={() => void skipMatchingQuestionnaire()}
+        >
+          {submitting ? "מדלגים..." : "דלג/י לשלב ההתאמות"}
+        </button>
+        {currentIndex === questionsLength - 1 ? (
+          !allAnswered ? (
+            <button
+              className="primary-button"
+              type="button"
+              disabled={savingQuestionId !== null || firstUnansweredIndex === -1}
+              onClick={moveToFirstUnansweredQuestion}
+            >
+              לשאלה החסרה הראשונה
+            </button>
+          ) : (
+            <button
+              className="primary-button"
+              type="button"
+              disabled={!allAnswered || submitting || savingQuestionId !== null}
+              onClick={() => void submitQuiz()}
+            >
+              {submitting ? config.submittingLabel : config.finalButton}
+            </button>
+          )
+        ) : null}
+      </div>
+
+      <p className="quiz-footnote" data-progress-percent={progressPercent}>
+        {answeredCount} תשובות נשמרו, {missingCount} שאלות נשארו
+      </p>
+    </>
   );
 }
 

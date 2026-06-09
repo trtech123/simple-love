@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Bot, FileQuestion, HeartHandshake, Lock, MessageCircle, UserRound, WalletCards } from "lucide-react";
+import { AppTopbar } from "@/components/app/app-frame";
 import { FunnelStateIcon } from "@/components/funnel";
 import type { MatchesPageData } from "../matches/matches-loader";
 import { MatchChatButton } from "../matches/match-chat-button";
@@ -18,29 +19,22 @@ export function AppHomeShell({ data }: { data: MatchesPageData }) {
   return (
     <main className="app-home-shell" dir="rtl">
       <section className="app-home-page" aria-label="LovLov app">
-        <header className="app-home-topbar">
-          <Link className="app-home-brand" href="/" dir="ltr">
-            LOVLOV.ME
-          </Link>
-          <div className="app-home-avatar" aria-hidden="true">
-            {profile?.displayName?.trim().charAt(0) || "L"}
-          </div>
-        </header>
+        <AppTopbar avatarLabel={profile?.displayName} />
 
         {activeTab === "coach" ? <CoachView data={data} /> : null}
         {activeTab === "matches" ? <MatchesView data={data} /> : null}
         {activeTab === "profile" ? <ProfileView data={data} /> : null}
       </section>
 
-      <nav className="app-bottom-nav" aria-label="Primary app navigation">
-        <NavButton active={activeTab === "coach"} icon={MessageCircle} label="AI coach" onClick={() => setActiveTab("coach")} />
+      <nav className="app-bottom-nav" aria-label="ניווט ראשי">
+        <NavButton active={activeTab === "coach"} icon={MessageCircle} label="מאמנת" onClick={() => setActiveTab("coach")} />
         <NavButton
           active={activeTab === "matches"}
           icon={data.profile?.hasMatchingEntitlement ? HeartHandshake : Lock}
-          label="Matches"
+          label="התאמות"
           onClick={() => setActiveTab("matches")}
         />
-        <NavButton active={activeTab === "profile"} icon={UserRound} label="Profile" onClick={() => setActiveTab("profile")} />
+        <NavButton active={activeTab === "profile"} icon={UserRound} label="פרופיל" onClick={() => setActiveTab("profile")} />
       </nav>
     </main>
   );
@@ -56,7 +50,7 @@ function CoachView({ data }: { data: MatchesPageData }) {
         <p>זה דף הבית שלך: מאמנת ה-AI, מצב ההתקדמות והצעדים הבאים לקראת התאמות.</p>
       </div>
 
-      <div className="app-profile-glance" aria-label="Profile summary">
+      <div className="app-profile-glance" aria-label="סיכום פרופיל">
         <span>{profile?.locationText ?? "לא הוגדר מיקום"}</span>
         <span>{profile?.relationshipIntention ?? "לא הוגדרה כוונת קשר"}</span>
       </div>
@@ -77,7 +71,7 @@ function CoachView({ data }: { data: MatchesPageData }) {
         <AiCoachPanel />
       </section>
 
-      <div className="app-mini-grid" aria-label="App progress">
+      <div className="app-mini-grid" aria-label="התקדמות">
         <article className="app-mini-card">
           <h3>הדוח האישי</h3>
           <p>התובנות הראשוניות מוכנות. אפשר להמשיך לדייק את הפרופיל והשאלון.</p>
@@ -152,7 +146,7 @@ function MatchesTabContent({ data }: { data: MatchesPageData }) {
     return (
       <div className="empty-state-card app-match-state">
         <FunnelStateIcon icon={WalletCards} />
-        <h2>Matches ready</h2>
+        <h2>ההתאמות מוכנות</h2>
         <p>ההתאמות מוכנות, אבל פתיחת שמות, תמונות וצ'אט זמינה רק אחרי פתיחת שלב ההתאמות.</p>
         <MatchingUnlockButton />
       </div>

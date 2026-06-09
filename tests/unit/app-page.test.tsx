@@ -19,16 +19,16 @@ vi.mock("@/lib/e2e-mode", () => ({
 }));
 
 vi.mock("../../src/app/profile/matching/matching-profile-form", () => ({
-  MatchingProfileForm: () => <div className="profile-onboarding">Onboarding wizard</div>,
+  MatchingProfileForm: () => <div className="profile-onboarding">אשף פרופיל</div>,
 }));
 
 vi.mock("../../src/app/matches/matches-loader", () => ({
   loadMatchesPageData: async () => ({
     profile: {
       userId: "user-1",
-      displayName: "Current User",
-      relationshipIntention: "serious",
-      locationText: "Tel Aviv",
+      displayName: "משתמש/ת נוכחי/ת",
+      relationshipIntention: "קשר רציני",
+      locationText: "תל אביב",
       completedDepthQuestionnaireAt: state.completedDepthQuestionnaireAt,
       matchingProfileComplete: state.matchingProfileComplete,
       hasMatchingEntitlement: false,
@@ -64,10 +64,10 @@ describe("/app page", () => {
     expect(html).toContain("app-home-shell");
     expect(html).toContain("app-bottom-nav");
     expect(html).not.toContain("app-tab-nav");
-    expect(html).toContain("Current User");
-    expect(html).toContain("Tel Aviv");
-    expect(html).toContain("serious");
-    expect(html).toContain("AI");
-    expect(html).toContain("aria-label=\"Matches\"");
+    expect(html).toContain("משתמש/ת נוכחי/ת");
+    expect(html).toContain("תל אביב");
+    expect(html).toContain("קשר רציני");
+    expect(html).toContain("מאמנת");
+    expect(html).toContain("aria-label=\"התאמות\"");
   });
 });

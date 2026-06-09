@@ -100,10 +100,10 @@ export function AiCoachPanel() {
         )}
       </div>
 
-      <div className="ai-coach-quick-prompts" aria-label="Quick prompts">
+      <div className="ai-coach-quick-prompts" aria-label="שאלות מהירות">
         {QUICK_PROMPTS.map((prompt, index) => (
           <button
-            aria-label={index === 0 ? "Start conversation prompt" : undefined}
+            aria-label={index === 0 ? "פתיחת שיחה מהירה" : undefined}
             className="ai-coach-chip"
             key={prompt.label}
             type="button"
@@ -120,7 +120,7 @@ export function AiCoachPanel() {
         </label>
         <div className="ai-coach-input-row">
           <textarea
-            aria-label="Message to AI coach"
+            aria-label="הודעה למאמנת"
             id="ai-coach-message"
             name="message"
             value={message}
@@ -128,7 +128,7 @@ export function AiCoachPanel() {
             placeholder="כתבי הודעה למאמנת..."
             rows={1}
           />
-          <button className="primary-button" type="submit" disabled={submitting || !message.trim()} aria-label="Send message">
+          <button className="primary-button" type="submit" disabled={submitting || !message.trim()} aria-label="שליחת הודעה">
             {submitting ? "שולחים..." : "שליחה"}
           </button>
         </div>

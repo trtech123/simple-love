@@ -22,9 +22,9 @@ vi.mock("../../src/app/matches/matches-loader", () => ({
   loadMatchesPageData: async () => ({
     profile: {
       userId: "user-1",
-      displayName: "Current User",
-      relationshipIntention: "long_term",
-      locationText: "Tel Aviv",
+      displayName: "משתמש/ת נוכחי/ת",
+      relationshipIntention: "קשר ארוך טווח",
+      locationText: "תל אביב",
       completedDepthQuestionnaireAt: "2026-06-08T00:00:00.000Z",
       matchingProfileComplete: true,
       hasMatchingEntitlement: false,
@@ -66,6 +66,7 @@ describe("MatchesPage", () => {
 
     const html = renderToString(await MatchesPage());
 
+    expect(html).toContain("app-home-shell");
     expect(html).toContain("התאמה נעולה");
     expect(html).toContain("פתיחת התאמות - 99");
     expect(html).not.toContain("Sensitive Match Name");

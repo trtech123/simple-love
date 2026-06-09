@@ -7,15 +7,15 @@ import type { MatchesPageData } from "../../src/app/matches/matches-loader";
 vi.stubGlobal("React", React);
 
 vi.mock("../../src/app/app/ai-coach-panel", () => ({
-  AiCoachPanel: () => <div>Coach panel body</div>,
+  AiCoachPanel: () => <div>גוף מאמנת</div>,
 }));
 
 vi.mock("../../src/app/matches/matching-unlock-button", () => ({
-  MatchingUnlockButton: () => <button type="button">Unlock matching</button>,
+  MatchingUnlockButton: () => <button type="button">פתיחת התאמות</button>,
 }));
 
 vi.mock("../../src/app/matches/match-chat-button", () => ({
-  MatchChatButton: ({ matchId }: { matchId: string }) => <button type="button">Chat {matchId}</button>,
+  MatchChatButton: ({ matchId }: { matchId: string }) => <button type="button">שיחה {matchId}</button>,
 }));
 
 describe("AppHomeShell", () => {
@@ -26,18 +26,18 @@ describe("AppHomeShell", () => {
   it("switches between coach and profile tabs", () => {
     render(<AppHomeShell data={baseData()} />);
 
-    expect(screen.getByText("Coach panel body")).toBeTruthy();
+    expect(screen.getByText("גוף מאמנת")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Profile" }));
+    fireEvent.click(screen.getByRole("button", { name: "פרופיל" }));
 
-    expect(screen.getByText("Current User")).toBeTruthy();
-    expect(screen.getByText("Tel Aviv")).toBeTruthy();
-    expect(screen.getByText("serious")).toBeTruthy();
-    expect(screen.queryByText("Coach panel body")).toBeNull();
+    expect(screen.getByText("משתמש/ת נוכחי/ת")).toBeTruthy();
+    expect(screen.getByText("תל אביב")).toBeTruthy();
+    expect(screen.getByText("קשר רציני")).toBeTruthy();
+    expect(screen.queryByText("גוף מאמנת")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "AI coach" }));
+    fireEvent.click(screen.getByRole("button", { name: "מאמנת" }));
 
-    expect(screen.getByText("Coach panel body")).toBeTruthy();
+    expect(screen.getByText("גוף מאמנת")).toBeTruthy();
   });
 
   it("shows the existing locked questionnaire and payment state in matches", () => {
@@ -50,10 +50,10 @@ describe("AppHomeShell", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Matches" }));
+    fireEvent.click(screen.getByRole("button", { name: "התאמות" }));
 
-    expect(screen.getByText(/Unlock matching/)).toBeTruthy();
-    expect(screen.getByText(/ready/i)).toBeTruthy();
+    expect(screen.getByText(/פתיחת התאמות/)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "ההתאמות מוכנות" })).toBeTruthy();
   });
 });
 
@@ -61,9 +61,9 @@ function baseData(overrides: Partial<NonNullable<MatchesPageData["profile"]>> = 
   return {
     profile: {
       userId: "user-1",
-      displayName: "Current User",
-      relationshipIntention: "serious",
-      locationText: "Tel Aviv",
+      displayName: "משתמש/ת נוכחי/ת",
+      relationshipIntention: "קשר רציני",
+      locationText: "תל אביב",
       completedDepthQuestionnaireAt: null,
       matchingProfileComplete: true,
       hasMatchingEntitlement: false,
